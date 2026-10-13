@@ -23,7 +23,9 @@
 | 실행/계약 문서 | `scripts/build.ps1`, `run-server.ps1`, `run-admin.ps1`, `run-user.ps1`, `docs/API.md`, `docs/MERGE_RULES.md` | restore/build/run, API 목차, 기능 브랜치/병합 절차 |
 | 기획서 생성 도구 | `tools/build_plan.py`, `build_revised_plan.py`, `build_csharp_plan.py`, `build_named_proposal.py`, `build_concise_plan.py`, `build_two_page_brief.py` | ReportLab PDF 생성과 v3→v4→v5 문구 치환. 앱 런타임 코드가 아님 |
 
-`01_AdminApp.zip`의 `bin`/`obj`에는 Admin/User/Shared 빌드 산출물이, 영상/상담 ZIP에도 각 DLL/PDB 및 빌드 산출물이 있다. `03_Server.7z`에는 서버/공용/영상/상담 빌드 결과와 OpenCvSharp Windows 네이티브 DLL(큰 용량의 주 원인)이 있다. `03_Server/ProductionLine.Server/bin/Debug/net8.0/data/store.json`은 소스 트리의 `data/store.json`과 SHA-256이 일치하는 동일 사본이다. 그 외 `.csproj.user`는 개인별 IDE 설정 파일이다. 바이너리와 자동 생성 파일을 작성 소스의 별도 구현으로 세지 않았다.
+압축파일 목록과 추출 파일을 다시 대조해, `bin`/`obj`/`.vs`/`.git`을 제외한 원본 파일이 검토 목록에 들어 있는지 확인했다. `.csproj.user` 3개도 별도로 읽었다. 관리자·사용자 앱의 파일은 `Form1.cs`를 Windows Form으로 표시하는 IDE 설정이고, 서버 파일은 `ActiveDebugProfile=https`를 선택한다. 기능 구현 코드는 아니다.
+
+`01_AdminApp.zip`의 `bin`/`obj`에는 Admin/User/Shared 빌드 산출물이, 영상/상담 ZIP에도 각 DLL/PDB 및 빌드 산출물이 있다. `03_Server.7z`에는 서버/공용/영상/상담 빌드 결과와 OpenCvSharp Windows 네이티브 DLL(큰 용량의 주 원인)이 있다. `03_Server/ProductionLine.Server/bin/Debug/net8.0/data/store.json`은 소스 트리의 `data/store.json`과 SHA-256이 일치하는 동일 사본이다. 바이너리와 자동 생성 파일을 작성 소스의 별도 구현으로 세지 않았다.
 
 ## 실제 연결 구조와 데이터 흐름
 
