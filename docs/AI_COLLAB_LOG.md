@@ -211,3 +211,27 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
 - 검증: 해당 없음
 - 조원 전달사항: 장서진에게 물어볼 것 — YOLO를 어느 PC에서 돌리는지, 서버에 보낼 값은 무엇인지(불량 종류·확신 정도 등), 확신이 낮으면 판정 불가로 처리하는지.
 - 다음 작업: 답을 받은 뒤 `InspectionEntity`와 검사 API 계약을 정한다.
+
+### 2026-10-17 / Claude / `with-claude` 업로드, DB 시작 시 마이그레이션 적용, .gitignore 수정
+
+- 종류: 구현, 검증, 사실
+- 기준 코드: Git `main` 커밋 `c69bcf3`(`with-claude/` 폴더 58개 파일). 업로드 시점의 Windows `with claude` 폴더 스냅샷이며, 이후 김하균님이 로컬에서 바꾼 내용은 포함되지 않는다.
+- 내용과 근거:
+  1. **업로드.** 김하균님 요청으로 `with claude` 폴더를 이 저장소(비공개)의 `with-claude/`에 올렸다. 서버 DB 전환 코드(`AppStore`·`AuthService`의 SQLite 사용, `Data/` 클래스 8개, `Migrations/` 5개, `DatabaseInitializer`)는 김하균님이 작성한 것이다. Claude는 읽고 검토한 뒤 아래 3가지만 고쳤다. 제외한 것: `bin`, `obj`, `.vs`, `App_Data`(DB 파일), `*.user`, zip 백업(`Data/LineEntity.zip` 포함, 김하균님 로컬 백업).
+  2. **`DatabaseInitializer.cs`에 `db.Database.Migrate();` 추가.** DB 파일이 없거나 새 마이그레이션이 있으면 서버 시작 때 표를 만들고 적용한다. 이유: 기존 코드는 DB 파일이 없으면 `db.Users.Any()`에서 "no such table"로 서버가 꺼질 수 있었다. 또 김하균님의 현재 DB에는 `InitialCreate`만 적용돼 있고 `AddIssueMessages`(문의 메시지 표)는 적용되지 않은 상태였다. 이미 적용된 마이그레이션은 다시 실행되지 않으므로 기존 데이터는 유지된다.
+  3. **한글이 깨지던 파일 2개를 UTF-8(BOM 없음)로 변환.** `Infrastructure/AuthService.cs`, `Data/IssueMessageEntity.cs`. 줄 수와 코드 내용은 같고 한글 주석만 복원했다.
+  4. **`.gitignore` 수정(업로드 중 발견한 문제).** 옛 JSON 저장소용 `03_Server/ProductionLine.Server/data/` 줄이 Windows의 대소문자 무시 때문에 새 `Data/` 폴더(DB 클래스 8개)까지 무시하고 있었다. 그대로 올렸다면 DB 클래스가 빠져 빌드가 안 됐을 것이다. 줄을 `03_Server/ProductionLine.Server/data/store.json`으로 좁혔다. 또 `03_Server/ProductionLine.Server/App_Data/`를 추가했다. 로컬 `with claude/.gitignore`와 저장소의 `with-claude/.gitignore`에 같은 변경을 적용했다.
+  5. App_Data의 DB 백업 zip 2개는 김하균님 요청으로 휴지통으로 보냈다. `Data/LineEntity.zip`은 실수로 함께 지웠다가 휴지통에서 복원했다.
+- 다른 의견 또는 영향: `.gitignore` 변경은 공용 Git 규칙이므로 Codex가 동의하지 않으면 알려 달라. 코드에 시연용 기본 비밀번호(`admin123!`, `worker123!`)가 있다. 저장소가 비공개라 그대로 두었고 **공개하게 되면 먼저 바꿔야 한다.**
+- 현재 상태: 완료(업로드와 위 3가지 수정). 상태 전이 문제는 사용자 결정 대기.
+- 검증:
+  - 통과: `with claude` 서버 `dotnet build` 경고 0, 오류 0.
+  - 통과: DB 파일이 없는 임시 폴더에서 서버 시작 → 표 7개와 마이그레이션 2개 적용, admin 로그인, 라인 4개, 사용자 2명.
+  - 통과: 김하균님 DB 복사본(임시 폴더)에 적용 → `IssueMessages` 표 추가, 기존 사용자 3명·라인 4개 유지. 김하균님의 실제 DB 파일은 변경하지 않았다.
+  - 통과: GitHub에서 `Data/` 8개, `Migrations/` 5개를 직접 확인했고 db·zip·bin·obj 파일은 올라가지 않았다.
+  - 미실행: 관리자·사용자 WinForms 연결, 두 PC 통신, 상태 전이 API 호출 시험.
+- 조원 전달사항: 공용 `Contracts.cs`와 `ProductionLineApiClient.cs`는 바뀌지 않았고 앱이 부르는 함수·주소도 같으므로 이번 변경으로 앱 담당이 고칠 것은 없다. 서버를 다음에 켜면 김하균님 DB에 `IssueMessages` 표가 자동 추가된다.
+- **미결(읽고 발견했지만 고치지 않음):**
+  - `AppStore.ValidateIssueTransition`이 작업자에게 `발생→확인→조치 중→완료 요청`을 한 단계씩만 허용한다. 기존 사용자 앱에는 "확인" 버튼이 없고 "점검 시작"이 바로 `InProgress`를 보내므로, 새 문제(`Occurred`)에서 점검 시작이 409로 거절된다. 선택지는 (A) 서버가 `Occurred→InProgress`도 허용, (B) 문성찬이 앱에 "확인" 버튼을 추가. 김하균님 결정 대기이며 Codex 의견을 요청한다.
+  - `IssueMessages` 표는 있으나 문의 메시지 API가 `Program.cs`에 없다. 로그아웃 API도 없다.
+- 다음 작업: 상태 전이 결정 → 반영. 그 뒤 문의 메시지 API 설계(앱 담당과 계약 합의). 센서 값 표·상담 기록 표는 센서와 YOLO 방식이 확정된 뒤 설계한다.
