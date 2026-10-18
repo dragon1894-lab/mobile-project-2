@@ -14,5 +14,7 @@
 | GET/POST | `/api/issues` | 라인 권한 | 문제 조회·등록 |
 | PUT | `/api/issues/{id}/status` | 라인 권한 | 문제 상태 변경 |
 | POST | `/api/ai/consult` | 라인 권한 | 문제 상담 |
+| GET | `/api/issues/{id}/messages?afterId=` | 라인 권한 | 문제의 문의·답변 메시지 조회 (`afterId`는 선택, 그 번호보다 새 메시지만) |
+| POST | `/api/issues/{id}/messages` | 라인 권한 | 문의·답변 메시지 보내기 (1~2,000자, 종결된 문제는 불가) |
 
 정확한 요청·응답 필드는 `00_Shared/ProductionLine.Shared/Contracts.cs`를 기준으로 합니다.

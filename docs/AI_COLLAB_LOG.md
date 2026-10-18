@@ -235,3 +235,24 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
   - `AppStore.ValidateIssueTransition`이 작업자에게 `발생→확인→조치 중→완료 요청`을 한 단계씩만 허용한다. 기존 사용자 앱에는 "확인" 버튼이 없고 "점검 시작"이 바로 `InProgress`를 보내므로, 새 문제(`Occurred`)에서 점검 시작이 409로 거절된다. 선택지는 (A) 서버가 `Occurred→InProgress`도 허용, (B) 문성찬이 앱에 "확인" 버튼을 추가. 김하균님 결정 대기이며 Codex 의견을 요청한다.
   - `IssueMessages` 표는 있으나 문의 메시지 API가 `Program.cs`에 없다. 로그아웃 API도 없다.
 - 다음 작업: 상태 전이 결정 → 반영. 그 뒤 문의 메시지 API 설계(앱 담당과 계약 합의). 센서 값 표·상담 기록 표는 센서와 YOLO 방식이 확정된 뒤 설계한다.
+
+### 2026-10-18 / Claude / 문의 메시지 API 추가, 공용 클라이언트 `UpdateUserAsync` 추가
+
+- 종류: 구현, 검증
+- 기준 코드: 이 커밋의 `with-claude/` (Windows `with claude` 폴더에서 수정 후 업로드). 변경 파일: `00_Shared/.../Contracts.cs`, `00_Shared/.../ProductionLineApiClient.cs`, `03_Server/.../Infrastructure/AppStore.cs`, `03_Server/.../Program.cs`, `docs/API.md`. 김하균님이 작성한 `md파일/DB_클래스_8개_이름과_역할.md`도 함께 올렸다. DB 표·마이그레이션은 바꾸지 않았다(`IssueMessages` 표는 기존 `AddIssueMessages` 마이그레이션 그대로).
+- 내용과 근거(김하균님 요청: "1번 문의 창구, 2번 UpdateUserAsync"):
+  1. **공용 양식 추가(기존 양식 변경 없음):** `CreateIssueMessageRequest(string Message)`, `IssueMessageDto(long Id, Guid IssueId, string SenderId, string SenderName, UserRole SenderRole, string Message, DateTimeOffset CreatedAt)`.
+  2. **공용 클라이언트 함수 추가:** `UpdateUserAsync(userId, UpdateUserRequest)` → 기존 `PUT /api/users/{id}`. `GetIssueMessagesAsync(issueId, afterId = null)` → `GET /api/issues/{id}/messages`. `SendIssueMessageAsync(issueId, message)` → `POST /api/issues/{id}/messages`.
+  3. **서버 창구 2개:** 둘 다 로그인과 해당 문제 라인의 접근 권한을 확인한다. 보낸 사람은 요청 내용이 아니라 로그인 세션에서 정한다. 메시지는 앞뒤 공백을 지우고 1~2,000자만 받는다. 보낸 당시 이름과 역할을 함께 저장한다. **종결된 문제에는 보낼 수 없고(409) 읽기는 가능**하다(종결 사건을 읽기 전용 이력으로 보존한다는 기획 기준). `afterId`를 주면 그 번호보다 새 메시지만 돌려준다(앱의 주기적 새 메시지 확인용). 메시지 번호 순서 = 보낸 순서.
+- 다른 의견 또는 영향: 서버가 관리자 PC에 먼저 알려 주는 실시간 알림은 만들지 않았다. 앱이 몇 초마다 `afterId`로 새 메시지를 물어보는 방식을 전제로 했다(사용자 앱의 기존 10초 갱신과 같은 방식). 실시간 알림이 필요하면 별도 결정이 필요하다. 종결 후 메시지 금지 규칙에 이견이 있으면 알려 달라.
+- 현재 상태: 완료(코드·빌드·서버 API 시험). 앱 화면 연결은 각 앱 담당.
+- 검증:
+  - 통과: 솔루션 전체 `dotnet build`(Shared, Server, Vision, AiAssistant, AdminApp, UserApp) 경고 0, 오류 0. 공용 코드에 추가만 했으므로 기존 앱 코드가 깨지지 않음을 빌드로 확인했다.
+  - 통과: 임시 DB에서 서버 API 21개 항목. 작업자 문의·관리자 답변 저장, 보낸 사람 아이디·역할, 공백 제거, 보낸 순서, `afterId`로 새 메시지만 조회, 새 메시지 없을 때 빈 목록, 토큰 없음 401, 다른 라인 문제 읽기·보내기 403, 빈 메시지·2,001자 400, 2,000자 200, 없는 문제 404, 종결 문제 보내기 409·읽기 200, 기존 사용자 수정 PUT 200.
+  - 미실행: 관리자·사용자 WinForms 화면 연결, 두 PC 통신. `UpdateUserAsync`·메시지 함수는 빌드로만 확인했고 앱에서 호출해 보지는 않았다.
+- 조원 전달사항(김하균님이 전달):
+  - **공통:** 바뀐 `Contracts.cs`, `ProductionLineApiClient.cs`(00_Shared)를 받아야 한다. 기존 함수는 그대로라 지금 코드는 안 고쳐도 된다. 서버 주소는 `http://<서버PC-IP>:5050`(미확정). 실패하면 공용 클라이언트가 서버 메시지를 예외로 올려 준다: 401(다시 로그인), 403(권한 없음), 400(빈 메시지·2,000자 초과), 404(문제 없음), 409(종결된 문제).
+  - **조영준(관리자 앱):** 사용자 수정·비활성화 화면에서 `await api.UpdateUserAsync(id, new UpdateUserRequest(이름, 활성여부, 허용라인목록, 새비밀번호또는null));`. 문의 확인은 문제를 고른 뒤 `GetIssueMessagesAsync(issueId)`로 전체를 읽고, 몇 초마다 `GetIssueMessagesAsync(issueId, 마지막메시지Id)`로 새 것만 받아 화면에 붙인다. 답변은 `SendIssueMessageAsync(issueId, 내용)`.
+  - **문성찬(사용자 앱):** 지금의 "관리자 문의 등록" 버튼은 새 문제를 하나 더 만든다. 이를 **선택한 문제에 `SendIssueMessageAsync(issueId, 내용)`으로 메시지를 보내는 방식**으로 바꾸고, 같은 방식으로 답변을 읽어 보여 준다. 종결된 문제에서는 보내기 버튼을 막는 것이 좋다.
+  - **공도현(상담·업무 흐름):** 문의 메시지는 AI 상담 기록과 별개다. AI 상담 기록 저장 구조는 아직 없다.
+- 다음 작업: 앱 담당자가 연결하면 함께 확인. AI 상담 기록 저장 구조 설계(공도현과 협의). 센서·YOLO는 확정 후.

@@ -149,6 +149,32 @@ app.MapPost("/api/ai/consult", (HttpContext context, AiConsultRequest request,
     return Results.Ok(assistant.Consult(issue, request.Question));
 });
 
+// 문제 한 건에 대한 작업자 문의·관리자 답변 (AI 상담과 별도)
+app.MapGet("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, long? afterId,
+    AppStore store, AuthService auth) =>
+{
+    var session = auth.Get(context);
+    if (session is null) return Unauthorized();
+    var issue = store.FindIssue(id);
+    if (issue is null) return Error(404, "문제를 찾을 수 없습니다.");
+    if (!session.CanAccessLine(issue.LineId)) return Forbidden();
+    return Results.Ok(store.GetIssueMessages(id, afterId));
+});
+
+app.MapPost("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, CreateIssueMessageRequest request,
+    AppStore store, AuthService auth) =>
+{
+    var session = auth.Get(context);
+    if (session is null) return Unauthorized();
+    var issue = store.FindIssue(id);
+    if (issue is null) return Error(404, "문제를 찾을 수 없습니다.");
+    if (!session.CanAccessLine(issue.LineId)) return Forbidden();
+    try { return Results.Ok(store.AddIssueMessage(id, session.UserId, request.Message)); }
+    catch (KeyNotFoundException ex) { return Error(404, ex.Message); }
+    catch (ArgumentException ex) { return Error(400, ex.Message); }
+    catch (InvalidOperationException ex) { return Error(409, ex.Message); }
+});
+
 app.Run();
 
 static IResult Unauthorized() => Error(StatusCodes.Status401Unauthorized, "로그인이 필요합니다.");

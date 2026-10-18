@@ -245,6 +245,49 @@ public sealed class AppStore
             .ThenBy(x => x.Id).Select(ToDto).ToList();
     }
 
+    // 보낸 사람은 윈폼 입력이 아니라 인증된 서버 세션에서 전달합니다.
+    public IssueMessageDto AddIssueMessage(Guid issueId, string senderId, string? message)
+    {
+        lock (_gate)
+        {
+            var text = message?.Trim() ?? "";
+            if (text.Length is 0 or > 2000)
+                throw new ArgumentException("메시지는 1~2,000자로 입력하세요.");
+
+            using var db = _contextFactory.CreateDbContext();
+            var issue = db.Issues.Find(issueId) ?? throw new KeyNotFoundException("문제를 찾을 수 없습니다.");
+            // 종결된 문제는 읽기 전용 이력으로 보존합니다.
+            if (issue.Status == IssueStatus.Closed)
+                throw new InvalidOperationException("종결된 문제에는 메시지를 남길 수 없습니다.");
+            var sender = FindUser(db, senderId)
+                ?? throw new ArgumentException("보낸 사용자를 찾을 수 없습니다.");
+
+            var entity = new IssueMessageEntity
+            {
+                IssueId = issue.Id,
+                SenderId = sender.Id,
+                // 나중에 이름이 바뀌어도 보낸 당시 이름과 역할을 남깁니다.
+                SenderName = sender.Name,
+                SenderRole = sender.Role,
+                Message = text,
+                CreatedAt = DateTimeOffset.Now
+            };
+            db.IssueMessages.Add(entity);
+            db.SaveChanges();
+            return ToDto(entity);
+        }
+    }
+
+    public IReadOnlyList<IssueMessageDto> GetIssueMessages(Guid issueId, long? afterId = null)
+    {
+        using var db = _contextFactory.CreateDbContext();
+        var query = db.IssueMessages.AsNoTracking().Where(x => x.IssueId == issueId);
+        if (afterId is not null)
+            query = query.Where(x => x.Id > afterId.Value);
+        // 메시지 번호는 저장 순서대로 커지므로 번호순이 보낸 순서입니다.
+        return query.OrderBy(x => x.Id).ToList().Select(ToDto).ToList();
+    }
+
     private static void ValidateIssueTransition(
         IssueEntity issue, UpdateIssueStatusRequest request, UserRole role)
     {
@@ -319,6 +362,10 @@ public sealed class AppStore
     private static IssueDto ToDto(IssueEntity issue) =>
         new(issue.Id, issue.LineId, issue.Type, issue.Title, issue.Description, issue.Status,
             issue.CreatedBy, issue.ActionNote, issue.CreatedAt, issue.UpdatedAt);
+
+    private static IssueMessageDto ToDto(IssueMessageEntity message) =>
+        new(message.Id, message.IssueId, message.SenderId, message.SenderName, message.SenderRole,
+            message.Message, message.CreatedAt);
 }
 
 // AuthServiceとの既存の受け渡し形式は維持します。

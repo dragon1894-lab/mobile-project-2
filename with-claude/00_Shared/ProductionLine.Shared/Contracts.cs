@@ -71,3 +71,15 @@ public sealed record UpdateIssueStatusRequest(IssueStatus Status, string ActionN
 public sealed record AiConsultRequest(Guid IssueId, string Question);
 public sealed record AiConsultResponse(string Answer, string ManualSource, bool NeedAdmin);
 public sealed record ApiMessage(string Message);
+
+// 문제 한 건에 연결된 작업자 문의·관리자 답변 메시지입니다. AI 상담 기록과는 별개입니다.
+public sealed record CreateIssueMessageRequest(string Message);
+
+public sealed record IssueMessageDto(
+    long Id,
+    Guid IssueId,
+    string SenderId,
+    string SenderName,
+    UserRole SenderRole,
+    string Message,
+    DateTimeOffset CreatedAt);

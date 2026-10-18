@@ -46,6 +46,12 @@ public sealed class ProductionLineApiClient : IDisposable
         return await ReadAsync<UserDto>(response);
     }
 
+    public async Task<UserDto> UpdateUserAsync(string userId, UpdateUserRequest request)
+    {
+        var response = await _http.PutAsJsonAsync($"api/users/{Uri.EscapeDataString(userId)}", request);
+        return await ReadAsync<UserDto>(response);
+    }
+
     public async Task<InspectionDto> SimulateInspectionAsync(InspectionRequest request)
     {
         var response = await _http.PostAsJsonAsync("api/inspections/simulate", request);
@@ -68,6 +74,19 @@ public sealed class ProductionLineApiClient : IDisposable
     {
         var response = await _http.PostAsJsonAsync("api/ai/consult", request);
         return await ReadAsync<AiConsultResponse>(response);
+    }
+
+    // afterId를 넘기면 그 번호보다 새 메시지만 받습니다. 주기적으로 새 메시지를 확인할 때 사용합니다.
+    public Task<List<IssueMessageDto>> GetIssueMessagesAsync(Guid issueId, long? afterId = null) =>
+        GetAsync<List<IssueMessageDto>>(afterId is null
+            ? $"api/issues/{issueId}/messages"
+            : $"api/issues/{issueId}/messages?afterId={afterId}");
+
+    public async Task<IssueMessageDto> SendIssueMessageAsync(Guid issueId, string message)
+    {
+        var response = await _http.PostAsJsonAsync($"api/issues/{issueId}/messages",
+            new CreateIssueMessageRequest(message));
+        return await ReadAsync<IssueMessageDto>(response);
     }
 
     public void Dispose() => _http.Dispose();
