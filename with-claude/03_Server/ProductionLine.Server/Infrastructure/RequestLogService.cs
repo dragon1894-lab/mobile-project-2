@@ -17,7 +17,7 @@ public static class RequestLogItems
     public const string UserId = "RequestLog.UserId";
     public const string IssueId = "RequestLog.IssueId";
     public const string Note = "RequestLog.Note";
-    // 조회 요청이라도 기록할 때 넣습니다. 예: 새 메시지를 앱에 전달한 경우
+    // 조회 요청이라도 기록할 때 넣습니다. 예: 새 메시지를 응답으로 보낸 경우
     public const string Force = "RequestLog.Force";
 }
 
@@ -130,8 +130,15 @@ public sealed class RequestLogService
         File.Move(temp, file, overwrite: true);
     }
 
-    private static string Csv(string? value) =>
-        string.IsNullOrEmpty(value) ? "" : $"\"{value.Replace("\"", "\"\"")}\"";
+    private static string Csv(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        // 로그인 실패 시 입력한 아이디처럼 사람이 넣은 값이 엑셀에서 수식으로 실행되지 않도록,
+        // =, +, -, @, 탭, 줄바꿈으로 시작하면 앞에 '를 붙여 글자로 보이게 합니다. 따옴표만으로는 막히지 않습니다.
+        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r' or '\n')
+            value = "'" + value;
+        return $"\"{value.Replace("\"", "\"\"")}\"";
+    }
 
     private static string? Cut(string? value, int max) =>
         value is null || value.Length <= max ? value : value[..max];

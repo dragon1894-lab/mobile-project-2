@@ -44,7 +44,7 @@ DatabaseInitializer.Initialize(
     app.Services.GetRequiredService<IDbContextFactory<AppDbContext>>());
 
 // 앱과 서버가 주고받은 요청을 기록합니다.
-// 저장·변경 요청, 실패한 요청, 새 메시지를 앱에 전달한 조회만 남기고, 비밀번호·토큰·메시지 내용은 남기지 않습니다.
+// 저장·변경 요청, 실패한 요청, 새 메시지를 응답한 조회만 남기고, 비밀번호·토큰·메시지 내용은 남기지 않습니다.
 app.Use(async (context, next) =>
 {
     if (!context.Request.Path.StartsWithSegments("/api"))
@@ -235,13 +235,14 @@ app.MapGet("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, long
     if (issue is null) return Error(404, "문제를 찾을 수 없습니다.");
     if (!session.CanAccessLine(issue.LineId)) return Forbidden();
     var messages = store.GetIssueMessages(id, afterId);
-    // 새 메시지를 앱에 전달했을 때만 "전달됨" 증거로 남깁니다. 새 메시지가 없는 주기적 확인은 남기지 않습니다.
+    // 새 메시지를 응답으로 보냈을 때만 남깁니다. 서버가 응답했다는 근거이며, 앱의 실제 수신·화면 표시까지 증명하지는 않습니다.
+    // 새 메시지가 없는 주기적 확인은 남기지 않습니다.
     if (messages.Count > 0)
     {
         context.Items[RequestLogItems.Force] = true;
         context.Items[RequestLogItems.Note] = messages.Count == 1
-            ? $"메시지 {messages[0].Id}번 전달"
-            : $"메시지 {messages[0].Id}~{messages[^1].Id}번 전달 ({messages.Count}건)";
+            ? $"메시지 {messages[0].Id}번 조회 응답"
+            : $"메시지 {messages[0].Id}~{messages[^1].Id}번 조회 응답 ({messages.Count}건)";
     }
     return Results.Ok(messages);
 });
