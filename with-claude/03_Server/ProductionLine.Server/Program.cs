@@ -1,3 +1,11 @@
+// [서버 시작점] 서버를 실행하면 이 파일이 위에서부터 차례로 실행됩니다.
+//   1. 서버 설정 (주소·포트, DB 파일 위치)
+//   2. 서버 부품 등록 (저장 담당, 출입증 담당, 검사, AI, 통신 기록)
+//   3. DB 준비 (표 만들기·기본 데이터)
+//   4. 통신 기록 장치 (모든 요청을 지켜보고 필요한 것만 기록)
+//   5. API 창구 (앱이 부르는 주소마다 할 일)
+//   6. 서버 실행 (요청을 기다림)
+// 모든 창구의 기본 흐름: 출입증 확인(auth.Get) → 권한 확인 → AppStore로 저장·조회 → 결과 반환
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using ProductionLine.AiAssistant;
@@ -6,7 +14,10 @@ using ProductionLine.Server.Infrastructure;
 using ProductionLine.Shared;
 using ProductionLine.Vision;
 
+// ===== 1. 서버 설정 =====
 var builder = WebApplication.CreateBuilder(args);
+
+// 요청을 받을 주소와 포트. appsettings.json의 ServerUrl (기본 0.0.0.0:5050 = 이 PC의 모든 주소, 5050번)
 
 builder.WebHost.UseUrls(
     builder.Configuration["ServerUrl"] ?? "http://0.0.0.0:5050");
@@ -24,6 +35,9 @@ var databasePath = Path.Combine(
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite($"Data Source={databasePath}"));
 
+// ===== 2. 서버 부품 등록 =====
+// 여기 등록한 부품은 API 창구의 매개변수(AppStore store, AuthService auth 등)로 자동으로 들어옵니다.
+// Singleton = 서버가 켜져 있는 동안 하나만 만들어 계속 같이 씀
 builder.Services.AddSingleton<AppStore>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<VisionInspector>();
@@ -40,9 +54,12 @@ builder.Services.AddHostedService<RequestLogCleanupService>();
 
 var app = builder.Build();
 
+// ===== 3. DB 준비 ===== (자세한 내용은 Infrastructure/DatabaseInitializer.cs)
 DatabaseInitializer.Initialize(
     app.Services.GetRequiredService<IDbContextFactory<AppDbContext>>());
 
+// ===== 4. 통신 기록 장치 =====
+// app.Use = 모든 요청이 창구에 가기 전·후에 거쳐 가는 길목. 여기서 요청이 끝난 뒤 기록을 남깁니다.
 // 앱과 서버가 주고받은 요청을 기록합니다.
 // 저장·변경 요청, 실패한 요청, 새 메시지를 응답한 조회만 남기고, 비밀번호·토큰·메시지 내용은 남기지 않습니다.
 app.Use(async (context, next) =>
@@ -95,6 +112,11 @@ app.Use(async (context, next) =>
     }
 });
 
+// ===== 5. API 창구 =====
+// app.MapGet = 조회 창구, app.MapPost = 등록 창구, app.MapPut = 변경 창구
+// 공용 코드(ProductionLineApiClient.cs)의 함수 하나가 아래 창구 하나를 부릅니다.
+
+// 서버 살아 있는지 확인용 (브라우저에서 http://서버IP:5050 을 열면 이 메시지가 보임)
 app.MapGet("/", () => Results.Ok(new
 {
     service = "ProductionLine.Server",
@@ -102,6 +124,7 @@ app.MapGet("/", () => Results.Ok(new
     transport = "Ethernet TCP/IP - HTTP REST/JSON"
 }));
 
+// --- 로그인 (LoginAsync) --- 성공하면 출입증과 사용자 정보를 돌려줌
 app.MapPost("/api/auth/login", (HttpContext context, LoginRequest request, AppStore store, AuthService auth) =>
 {
     var user = store.ValidateLogin(request.UserId, request.Password);
@@ -115,6 +138,7 @@ app.MapPost("/api/auth/login", (HttpContext context, LoginRequest request, AppSt
     return Results.Ok(new LoginResponse(auth.Create(user), AppStore.ToDto(user)));
 });
 
+// --- 라인 조회 (GetLinesAsync) --- 관리자는 전체, 작업자는 자기 라인만
 app.MapGet("/api/lines", (HttpContext context, AppStore store, AuthService auth) =>
 {
     var session = auth.Get(context);
@@ -122,6 +146,7 @@ app.MapGet("/api/lines", (HttpContext context, AppStore store, AuthService auth)
     return Results.Ok(session.Role == UserRole.Admin ? store.GetLines() : store.GetLines(session.AllowedLineIds));
 });
 
+// --- 사용자 관리 (관리자만): 목록 GetUsersAsync, 추가 CreateUserAsync, 수정 UpdateUserAsync ---
 app.MapGet("/api/users", (HttpContext context, AppStore store, AuthService auth) =>
 {
     var session = auth.Get(context);
@@ -152,6 +177,7 @@ app.MapPut("/api/users/{id}", (HttpContext context, string id, UpdateUserRequest
     catch (ArgumentException ex) { return Error(400, ex.Message); }
 });
 
+// --- 검사: 이력 GetInspectionsAsync, 실행 SimulateInspectionAsync (실제 라인 LINE 1만) ---
 app.MapGet("/api/inspections", (HttpContext context, int lineId, AppStore store, AuthService auth) =>
 {
     var session = auth.Get(context);
@@ -173,6 +199,8 @@ app.MapPost("/api/inspections/simulate", (HttpContext context, InspectionRequest
     return Results.Ok(inspection);
 });
 
+// --- 문제: 목록 GetIssuesAsync, 등록 CreateIssueAsync, 상태 변경 UpdateIssueAsync ---
+// 상태 변경 순서 검사는 AppStore.ValidateIssueTransition이 하고, 여기서는 결과를 번호(400/403/404/409)로 바꿔 돌려줌
 app.MapGet("/api/issues", (HttpContext context, AppStore store, AuthService auth) =>
 {
     var session = auth.Get(context);
@@ -214,6 +242,7 @@ app.MapPut("/api/issues/{id:guid}/status", (HttpContext context, Guid id, Update
     catch (InvalidOperationException ex) { return Error(409, ex.Message); }
 });
 
+// --- AI 상담 (ConsultAiAsync) --- 05_AiAssistant의 ManualAssistant가 답을 만듦. 상담 내용은 아직 DB에 저장하지 않음
 app.MapPost("/api/ai/consult", (HttpContext context, AiConsultRequest request,
     AppStore store, AuthService auth, ManualAssistant assistant) =>
 {
@@ -225,6 +254,7 @@ app.MapPost("/api/ai/consult", (HttpContext context, AiConsultRequest request,
     return Results.Ok(assistant.Consult(issue, request.Question));
 });
 
+// --- 문의 메시지: 읽기 GetIssueMessagesAsync, 보내기 SendIssueMessageAsync ---
 // 문제 한 건에 대한 작업자 문의·관리자 답변 (AI 상담과 별도)
 app.MapGet("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, long? afterId,
     AppStore store, AuthService auth) =>
@@ -266,8 +296,11 @@ app.MapPost("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, Cre
     catch (InvalidOperationException ex) { return Error(409, ex.Message); }
 });
 
+// ===== 6. 서버 실행 ===== 여기서부터 서버가 요청을 기다립니다 (창을 닫거나 Ctrl+C로 종료)
 app.Run();
 
+// 오류 응답 도우미: 앱에 결과 번호와 { "message": "안내 문구" }를 돌려줌
+// 401 = 로그인 필요, 403 = 권한 없음, 그 밖의 번호는 Error(번호, 문구)로 직접 지정
 static IResult Unauthorized() => Error(StatusCodes.Status401Unauthorized, "로그인이 필요합니다.");
 static IResult Forbidden() => Error(StatusCodes.Status403Forbidden, "접근 권한이 없습니다.");
 static IResult Error(int statusCode, string message) => Results.Json(new ApiMessage(message), statusCode: statusCode);

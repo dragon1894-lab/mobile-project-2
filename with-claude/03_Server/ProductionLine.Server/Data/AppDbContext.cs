@@ -1,8 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 namespace ProductionLine.Server.Data;
+
+// [DB 관리] 서버가 DB를 쓸 때 드나드는 "문"
+// - 아래 DbSet 목록 = DB에 있는 표 목록입니다. 여기에 등록해야 표가 만들어집니다.
+// - OnModelCreating = 표끼리 어떻게 연결되는지, 칸에 어떤 규칙이 있는지 정하는 곳입니다.
+// - 서버 코드는 db.Issues.Add(...), db.SaveChanges()처럼 쓰고, EF Core가 이걸 SQL(INSERT, SELECT…)로 바꿔 DB에 보냅니다.
+// - 이 파일을 바꿔서 표 모양이 달라지면 마이그레이션(Migrations 폴더)을 새로 만들어야 DB에 반영됩니다.
 public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    // ===== DB 표 목록 =====
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserLineAccessEntity> UserLineAccesses => Set<UserLineAccessEntity>();
     public DbSet<LineEntity> Lines => Set<LineEntity>();
@@ -11,9 +19,13 @@ public sealed class AppDbContext : DbContext
     public DbSet<IssueHistoryEntity> IssueHistories => Set<IssueHistoryEntity>();
     public DbSet<IssueMessageEntity> IssueMessages => Set<IssueMessageEntity>();
     public DbSet<RequestLogEntity> RequestLogs => Set<RequestLogEntity>();
+    // ===== 표끼리의 연결 규칙 =====
+    // HasForeignKey = "이 칸은 다른 표의 번호를 가리킨다" (예: 문제의 LineId → Lines 표)
+    // DeleteBehavior.Restrict = 연결된 기록이 있으면 함부로 지우지 못하게 막음 (기록 보존)
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        // 같은 사용자에게 같은 라인 권한이 두 번 저장되지 않게 (사용자, 라인) 조합을 고유 키로 사용
         modelBuilder.Entity<UserLineAccessEntity>().HasKey(x => new { x.UserId, x.LineId });
         modelBuilder.Entity<UserLineAccessEntity>().HasOne<UserEntity>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<UserLineAccessEntity>().HasOne<LineEntity>().WithMany().HasForeignKey(x => x.LineId).OnDelete(DeleteBehavior.Restrict);
@@ -23,6 +35,7 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<IssueHistoryEntity>().HasOne<IssueEntity>().WithMany().HasForeignKey(x => x.IssueId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<IssueHistoryEntity>().HasOne<UserEntity>().WithMany().HasForeignKey(x => x.ChangedBy).OnDelete(DeleteBehavior.Restrict);
 
+        // 문의 메시지 표: 문제·보낸 사람과 연결, 문제별로 빨리 찾는 색인, 내용 1~2,000자 제한
         modelBuilder.Entity<IssueMessageEntity>()
             .HasOne<IssueEntity>().WithMany().HasForeignKey(x => x.IssueId)
             .OnDelete(DeleteBehavior.Restrict);
@@ -35,6 +48,7 @@ public sealed class AppDbContext : DbContext
             .IsRequired().HasMaxLength(2000);
         modelBuilder.Entity<IssueMessageEntity>().ToTable(table =>
             table.HasCheckConstraint("CK_IssueMessages_MessageLength", "length(\"Message\") BETWEEN 1 AND 2000"));
+        // 시각을 큰 숫자(Ticks)로 바꿔 저장: SQLite가 날짜 정렬·비교를 못 해서 숫자로 저장함
         modelBuilder.Entity<IssueMessageEntity>().Property(x => x.CreatedAt)
             .HasConversion(value => value.UtcDateTime.Ticks,
                 value => new DateTimeOffset(value, TimeSpan.Zero));

@@ -1,9 +1,15 @@
 namespace ProductionLine.Shared;
 
-public enum UserRole { Admin, User }
-public enum InspectionResultType { Normal, Defect, Undetermined }
-public enum IssueType { ProductionLine, InspectionSystem }
-public enum IssueStatus { Occurred, Acknowledged, InProgress, CompletionRequested, Closed }
+// [공용 양식] 앱과 서버가 주고받는 데이터의 모양입니다. 앱과 서버가 같은 파일을 씁니다.
+// - Request = 앱이 서버에 보내는 것, Dto/Response = 서버가 앱에 돌려주는 것
+// - 이 파일을 바꾸면 모든 앱이 영향을 받으므로 팀 합의 후 바꾸고, 바뀐 파일을 조원에게 다시 보내야 합니다.
+// - 새로 추가만 하는 것은 기존 앱 코드를 깨지 않습니다.
+
+// 아래 목록(enum)은 DB와 통신에서 숫자로 저장됩니다. 순서를 바꾸면 기존 데이터의 뜻이 바뀌니 바꾸지 마세요.
+public enum UserRole { Admin, User }                                                      // 0 관리자, 1 작업자
+public enum InspectionResultType { Normal, Defect, Undetermined }                          // 0 정상, 1 불량, 2 판정 불가
+public enum IssueType { ProductionLine, InspectionSystem }                                 // 0 생산라인 문제, 1 검사 시스템 문제
+public enum IssueStatus { Occurred, Acknowledged, InProgress, CompletionRequested, Closed } // 0 발생, 1 확인, 2 조치 중, 3 완료 요청, 4 종결
 
 public sealed record LoginRequest(string UserId, string Password);
 public sealed record LoginResponse(string Token, UserDto User);

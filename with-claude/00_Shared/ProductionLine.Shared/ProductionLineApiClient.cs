@@ -4,6 +4,12 @@ using System.Text.Json;
 
 namespace ProductionLine.Shared;
 
+// [앱용 서버 호출 함수 모음] 관리자 앱·사용자 앱은 이 클래스의 함수로만 서버와 통신합니다.
+// - 함수 하나 = 서버 창구(Program.cs의 주소) 하나. 예: CreateIssueAsync → POST /api/issues
+// - 서버 주소 정하는 순서: 생성자에 넘긴 주소 → 환경변수 PRODUCTIONLINE_SERVER_URL → http://127.0.0.1:5050 (같은 PC)
+// - LoginAsync에 성공하면 출입증(Token)을 기억했다가 이후 요청마다 자동으로 붙입니다.
+// - 서버가 오류(400·401·403·404·409·500)를 돌려주면 서버의 안내 문구로 예외(InvalidOperationException)를 던집니다.
+//   앱에서는 try/catch로 잡아서 ex.Message를 화면에 보여 주면 됩니다.
 public sealed class ProductionLineApiClient : IDisposable
 {
     private readonly HttpClient _http;

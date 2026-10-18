@@ -4,6 +4,12 @@ using ProductionLine.Shared;
 
 namespace ProductionLine.Server.Infrastructure;
 
+// [DB 준비 담당] 서버가 켜질 때 Program.cs가 한 번 부릅니다.
+// 1) Migrate: DB 파일·표가 없으면 만들고, 새 마이그레이션이 있으면 적용 (기존 데이터는 그대로)
+// 2) 사용자·라인이 하나도 없을 때만 시연용 기본 데이터를 넣음
+//    - 계정: admin / admin123! (관리자), worker1 / worker123! (작업자, 1번 라인)
+//    - 라인: 1번 실제 라인, 2~4번 가상 라인
+// DB를 처음부터 다시 만들고 싶으면 서버를 끄고 App_Data/productionline.db 파일만 지우면 됩니다.
 public static class DatabaseInitializer
 {
     public static void Initialize(IDbContextFactory<AppDbContext> contextFactory)

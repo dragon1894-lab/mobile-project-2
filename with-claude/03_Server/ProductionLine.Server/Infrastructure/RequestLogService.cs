@@ -4,6 +4,14 @@ using ProductionLine.Server.Data;
 
 namespace ProductionLine.Server.Infrastructure;
 
+// [통신 기록 담당] 이 파일에 4가지가 들어 있습니다.
+// 1) RequestLogOptions        : 보관 기간(7일)과 백업 폴더 위치
+// 2) RequestLogItems          : 각 API 창구가 "누가, 어느 문제, 메모"를 기록 장치에 넘길 때 쓰는 이름표
+// 3) RequestLogService        : 기록 한 줄 저장(Record), 오래된 기록 CSV 백업 후 삭제(CleanupExpired)
+// 4) RequestLogCleanupService : 서버가 켜질 때 한 번, 그 뒤 하루 한 번 CleanupExpired를 자동 실행
+// 기록을 남기는 시점은 Program.cs의 "통신 기록 장치"(app.Use) 부분입니다.
+// 백업 파일 위치: App_Data/통신기록_백업/request-logs_날짜_시각.csv (엑셀로 열림)
+
 public sealed class RequestLogOptions
 {
     // 이 기간이 지난 기록은 CSV로 백업한 뒤 DB에서 지웁니다. appsettings.json의 RequestLogRetentionDays로 바꿉니다.
