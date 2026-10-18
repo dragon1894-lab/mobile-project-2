@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using ProductionLine.AiAssistant;
 using ProductionLine.Server.Data;
@@ -28,10 +29,71 @@ builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<VisionInspector>();
 builder.Services.AddSingleton<ManualAssistant>();
 
+// 통신 기록: 보관 기간이 지난 기록은 App_Data/통신기록_백업에 CSV로 백업한 뒤 지웁니다.
+builder.Services.AddSingleton(new RequestLogOptions
+{
+    RetentionDays = Math.Max(1, builder.Configuration.GetValue("RequestLogRetentionDays", 7)),
+    BackupDirectory = Path.Combine(databaseDirectory, "통신기록_백업")
+});
+builder.Services.AddSingleton<RequestLogService>();
+builder.Services.AddHostedService<RequestLogCleanupService>();
+
 var app = builder.Build();
 
 DatabaseInitializer.Initialize(
     app.Services.GetRequiredService<IDbContextFactory<AppDbContext>>());
+
+// 앱과 서버가 주고받은 요청을 기록합니다.
+// 저장·변경 요청, 실패한 요청, 새 메시지를 앱에 전달한 조회만 남기고, 비밀번호·토큰·메시지 내용은 남기지 않습니다.
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Path.StartsWithSegments("/api"))
+    {
+        await next();
+        return;
+    }
+
+    var receivedAt = DateTimeOffset.Now;
+    var started = Stopwatch.GetTimestamp();
+    var failed = false;
+    try
+    {
+        await next();
+    }
+    catch
+    {
+        failed = true;
+        throw;
+    }
+    finally
+    {
+        var statusCode = failed ? StatusCodes.Status500InternalServerError : context.Response.StatusCode;
+        var method = context.Request.Method;
+        if (!HttpMethods.IsGet(method) || statusCode >= 400 || context.Items.ContainsKey(RequestLogItems.Force))
+        {
+            var pattern = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
+            var issueId = context.Items[RequestLogItems.IssueId] as Guid?;
+            if (issueId is null && pattern?.StartsWith("/api/issues/") == true
+                && Guid.TryParse(context.GetRouteValue("id")?.ToString(), out var routeIssueId))
+                issueId = routeIssueId;
+            var ip = context.Connection.RemoteIpAddress;
+
+            context.RequestServices.GetRequiredService<RequestLogService>().Record(new RequestLogEntity
+            {
+                ReceivedAt = receivedAt,
+                UserId = context.Items[RequestLogItems.UserId] as string,
+                ClientIp = ip is null ? null : (ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip).ToString(),
+                Method = method,
+                Path = context.Request.Path.Value ?? "",
+                Action = RequestLogService.ActionName(method, pattern, context.Request.Path.Value ?? ""),
+                IssueId = issueId,
+                StatusCode = statusCode,
+                DurationMs = (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                Note = context.Items[RequestLogItems.Note] as string
+            });
+        }
+    }
+});
 
 app.MapGet("/", () => Results.Ok(new
 {
@@ -40,12 +102,17 @@ app.MapGet("/", () => Results.Ok(new
     transport = "Ethernet TCP/IP - HTTP REST/JSON"
 }));
 
-app.MapPost("/api/auth/login", (LoginRequest request, AppStore store, AuthService auth) =>
+app.MapPost("/api/auth/login", (HttpContext context, LoginRequest request, AppStore store, AuthService auth) =>
 {
     var user = store.ValidateLogin(request.UserId, request.Password);
-    return user is null
-        ? Error(StatusCodes.Status401Unauthorized, "아이디 또는 비밀번호를 확인하세요.")
-        : Results.Ok(new LoginResponse(auth.Create(user), AppStore.ToDto(user)));
+    // 실패해도 시도한 아이디는 남깁니다. 비밀번호는 기록하지 않습니다.
+    context.Items[RequestLogItems.UserId] = user?.Id ?? request.UserId;
+    if (user is null)
+    {
+        context.Items[RequestLogItems.Note] = "로그인 실패";
+        return Error(StatusCodes.Status401Unauthorized, "아이디 또는 비밀번호를 확인하세요.");
+    }
+    return Results.Ok(new LoginResponse(auth.Create(user), AppStore.ToDto(user)));
 });
 
 app.MapGet("/api/lines", (HttpContext context, AppStore store, AuthService auth) =>
@@ -101,7 +168,9 @@ app.MapPost("/api/inspections/simulate", (HttpContext context, InspectionRequest
     if (!session.CanAccessLine(request.LineId)) return Forbidden();
     if (store.FindLine(request.LineId) is not { IsReal: true })
         return Error(400, "대표 라인만 실제 검사할 수 있습니다.");
-    return Results.Ok(store.AddInspection(inspector.Inspect(request)));
+    var inspection = store.AddInspection(inspector.Inspect(request));
+    context.Items[RequestLogItems.Note] = $"검사 {inspection.Id} 결과 {inspection.Result}";
+    return Results.Ok(inspection);
 });
 
 app.MapGet("/api/issues", (HttpContext context, AppStore store, AuthService auth) =>
@@ -117,7 +186,12 @@ app.MapPost("/api/issues", (HttpContext context, CreateIssueRequest request, App
     if (session is null) return Unauthorized();
     if (!session.CanAccessLine(request.LineId)) return Forbidden();
     if (string.IsNullOrWhiteSpace(request.Title)) return Error(400, "문제 제목을 입력하세요.");
-    try { return Results.Ok(store.AddIssue(request, session.UserId)); }
+    try
+    {
+        var created = store.AddIssue(request, session.UserId);
+        context.Items[RequestLogItems.IssueId] = created.Id;
+        return Results.Ok(created);
+    }
     catch (ArgumentException ex) { return Error(400, ex.Message); }
 });
 
@@ -128,6 +202,8 @@ app.MapPut("/api/issues/{id:guid}/status", (HttpContext context, Guid id, Update
     var issue = store.FindIssue(id);
     if (session is null) return Unauthorized();
     if (issue is null) return Error(404, "문제를 찾을 수 없습니다.");
+    // 성공·거절과 관계없이 어떤 상태 변경을 요청했는지 남깁니다.
+    context.Items[RequestLogItems.Note] = $"{issue.Status} → {request.Status}";
     if (!session.CanAccessLine(issue.LineId)) return Forbidden();
     if (request.Status == IssueStatus.Closed && session.Role != UserRole.Admin)
         return Error(403, "문제 종결은 관리자만 수행할 수 있습니다.");
@@ -158,7 +234,16 @@ app.MapGet("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, long
     var issue = store.FindIssue(id);
     if (issue is null) return Error(404, "문제를 찾을 수 없습니다.");
     if (!session.CanAccessLine(issue.LineId)) return Forbidden();
-    return Results.Ok(store.GetIssueMessages(id, afterId));
+    var messages = store.GetIssueMessages(id, afterId);
+    // 새 메시지를 앱에 전달했을 때만 "전달됨" 증거로 남깁니다. 새 메시지가 없는 주기적 확인은 남기지 않습니다.
+    if (messages.Count > 0)
+    {
+        context.Items[RequestLogItems.Force] = true;
+        context.Items[RequestLogItems.Note] = messages.Count == 1
+            ? $"메시지 {messages[0].Id}번 전달"
+            : $"메시지 {messages[0].Id}~{messages[^1].Id}번 전달 ({messages.Count}건)";
+    }
+    return Results.Ok(messages);
 });
 
 app.MapPost("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, CreateIssueMessageRequest request,
@@ -169,7 +254,12 @@ app.MapPost("/api/issues/{id:guid}/messages", (HttpContext context, Guid id, Cre
     var issue = store.FindIssue(id);
     if (issue is null) return Error(404, "문제를 찾을 수 없습니다.");
     if (!session.CanAccessLine(issue.LineId)) return Forbidden();
-    try { return Results.Ok(store.AddIssueMessage(id, session.UserId, request.Message)); }
+    try
+    {
+        var saved = store.AddIssueMessage(id, session.UserId, request.Message);
+        context.Items[RequestLogItems.Note] = $"메시지 {saved.Id}번 저장";
+        return Results.Ok(saved);
+    }
     catch (KeyNotFoundException ex) { return Error(404, ex.Message); }
     catch (ArgumentException ex) { return Error(400, ex.Message); }
     catch (InvalidOperationException ex) { return Error(409, ex.Message); }

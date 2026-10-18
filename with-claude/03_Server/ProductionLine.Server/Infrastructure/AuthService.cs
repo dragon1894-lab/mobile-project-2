@@ -52,6 +52,9 @@ public sealed class AuthService
             .Select(x => x.LineId)
             .ToArray();
 
+        // 통신 기록에 요청한 사용자를 남깁니다.
+        context.Items[RequestLogItems.UserId] = user.Id;
+
         // 요청마다 만료 시간을 연장하지 않고 최초 로그인 만료를 유지합니다.
         return new AuthSession(user.Id, user.Role, lineIds, session.ExpiresAt);
     }

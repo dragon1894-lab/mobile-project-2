@@ -10,6 +10,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<IssueEntity> Issues => Set<IssueEntity>();
     public DbSet<IssueHistoryEntity> IssueHistories => Set<IssueHistoryEntity>();
     public DbSet<IssueMessageEntity> IssueMessages => Set<IssueMessageEntity>();
+    public DbSet<RequestLogEntity> RequestLogs => Set<RequestLogEntity>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -37,5 +38,17 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<IssueMessageEntity>().Property(x => x.CreatedAt)
             .HasConversion(value => value.UtcDateTime.Ticks,
                 value => new DateTimeOffset(value, TimeSpan.Zero));
+
+        // 통신 기록은 존재하지 않는 사용자·문제 번호로 온 요청도 남겨야 하므로 외래 키를 걸지 않습니다.
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.ReceivedAt)
+            .HasConversion(value => value.UtcDateTime.Ticks,
+                value => new DateTimeOffset(value, TimeSpan.Zero));
+        modelBuilder.Entity<RequestLogEntity>().HasIndex(x => x.ReceivedAt);
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.Method).HasMaxLength(10);
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.Path).HasMaxLength(300);
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.Action).HasMaxLength(100);
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.UserId).HasMaxLength(100);
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.ClientIp).HasMaxLength(64);
+        modelBuilder.Entity<RequestLogEntity>().Property(x => x.Note).HasMaxLength(500);
     }
 }
