@@ -2,7 +2,7 @@ using ProductionLine.Shared;
 
 namespace ProductionLine.Server.Data;
 
-// [DB 표] Inspections — 검사 한 번에 한 줄씩 쌓이는 검사 결과
+// [DB 표] Inspections — 검사 한 번에 한 줄씩 쌓이는 검사 결과 (불량인지 왜 불량인지 이런거 저장)
 // 지금은 앱이 보낸 점수로 판정하는 시뮬레이션 방식입니다. YOLO 결과가 정해지면 칸이 추가될 수 있습니다.
 public sealed class InspectionEntity
 {

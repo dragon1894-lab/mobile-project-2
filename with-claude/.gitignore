@@ -5,3 +5,5 @@ obj/
 *.user
 03_Server/ProductionLine.Server/data/store.json
 03_Server/ProductionLine.Server/App_Data/
+03_Server/ProductionLine.Server/data/group-chat.json
+03_Server/ProductionLine.Server/data/ai-events.jsonl

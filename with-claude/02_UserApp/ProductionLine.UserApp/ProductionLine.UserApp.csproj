@@ -1,10 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\..\00_Shared\ProductionLine.Shared\ProductionLine.Shared.csproj" />
+    <ProjectReference Include="..\..\04_Vision\ProductionLine.Vision\ProductionLine.Vision.csproj" />
+    <Compile Include="..\..\00_Shared\ProductionLine.ChatUI\GroupChatPanel.cs" Link="Chat\GroupChatPanel.cs" />
   </ItemGroup>
 
   <PropertyGroup>
+    <AssemblyName>ProductionLine.UserApp.Moon</AssemblyName>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>

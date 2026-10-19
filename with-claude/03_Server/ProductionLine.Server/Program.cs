@@ -43,6 +43,45 @@ builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<VisionInspector>();
 builder.Services.AddSingleton<ManualAssistant>();
 
+// 단체 채팅: data/group-chat.json에 최근 5000건을 저장. 활성 계정이면 누구나 자동으로 참여 (공도현)
+builder.Services.AddSingleton<GroupChatStore>();
+
+// AI 상담: Gemini 또는 OpenAI에 물어보고, 키가 없거나 실패하면 매뉴얼 답변으로 대체 (공도현)
+// 상담 내용은 저장하지 않고, data/ai-events.jsonl에 진단 코드만 남김
+builder.Services.AddSingleton<AiEventLog>();
+var providerName = builder.Configuration["AI_PROVIDER"] ?? builder.Configuration["Ai:Provider"] ?? "Gemini";
+if (!Enum.TryParse<AiProvider>(providerName, true, out var provider) || !Enum.IsDefined(provider))
+    throw new InvalidOperationException("AI_PROVIDER는 Gemini 또는 OpenAi여야 합니다.");
+var aiSection = provider == AiProvider.Gemini ? "Gemini" : "OpenAi";
+var keyVariable = provider == AiProvider.Gemini ? "GEMINI_API_KEY" : "OPENAI_API_KEY";
+var modelVariable = provider == AiProvider.Gemini ? "GEMINI_MODEL" : "OPENAI_MODEL";
+var configuredKey = (builder.Configuration[keyVariable] ?? string.Empty).Trim();
+// 환경변수에 키가 없으면 set-gemini-key.cmd로 이 PC에 저장해 둔 키를 읽음
+if (provider == AiProvider.Gemini && configuredKey.Length == 0 && builder.Configuration.GetValue("Gemini:UseSavedKey", true))
+    configuredKey = GeminiKeyStorage.Load();
+builder.Services.AddSingleton(new AiProviderOptions
+{
+    Provider = provider,
+    GeminiThinkingLevel = builder.Configuration["Gemini:ThinkingLevel"] ?? "MINIMAL",
+    Enabled = builder.Configuration.GetValue(aiSection + ":Enabled", true),
+    ApiKey = configuredKey,
+    Model = builder.Configuration[modelVariable] ?? builder.Configuration[aiSection + ":Model"]
+        ?? (provider == AiProvider.Gemini ? "gemini-3.5-flash-lite" : "gpt-5.4-mini"),
+    RequestTimeout = TimeSpan.FromSeconds(builder.Configuration.GetValue(aiSection + ":TimeoutSeconds", provider == AiProvider.Gemini ? 30 : 7)),
+    MaxOutputTokens = builder.Configuration.GetValue(aiSection + ":MaxOutputTokens", provider == AiProvider.Gemini ? 2048 : 900),
+    RequestsPerMinute = builder.Configuration.GetValue(aiSection + ":RequestsPerMinute", 20),
+    RequestsPerDay = builder.Configuration.GetValue(aiSection + ":RequestsPerDay", 100)
+});
+builder.Services.AddHttpClient<AiResponseClient>(client => client.Timeout = Timeout.InfiniteTimeSpan).RedactLoggedHeaders(_ => true);
+builder.Services.AddSingleton<AiConsultationService>(services =>
+{
+    var logger = services.GetRequiredService<ILogger<AiConsultationService>>();
+    var events = services.GetRequiredService<AiEventLog>();
+    return new(services.GetRequiredService<ManualAssistant>(), services.GetRequiredService<AiResponseClient>(),
+        services.GetRequiredService<AiProviderOptions>(),
+        code => { logger.LogInformation("AI consultation event: {EventCode}", code); events.Record(code); });
+});
+
 // 통신 기록: 보관 기간이 지난 기록은 App_Data/통신기록_백업에 CSV로 백업한 뒤 지웁니다.
 builder.Services.AddSingleton(new RequestLogOptions
 {
@@ -242,17 +281,21 @@ app.MapPut("/api/issues/{id:guid}/status", (HttpContext context, Guid id, Update
     catch (InvalidOperationException ex) { return Error(409, ex.Message); }
 });
 
-// --- AI 상담 (ConsultAiAsync) --- 05_AiAssistant의 ManualAssistant가 답을 만듦. 상담 내용은 아직 DB에 저장하지 않음
-app.MapPost("/api/ai/consult", (HttpContext context, AiConsultRequest request,
-    AppStore store, AuthService auth, ManualAssistant assistant) =>
+// --- AI 상담 (ConsultAiAsync) --- 05_AiAssistant의 AiConsultationService가 외부 AI 또는 매뉴얼로 답을 만듦
+// 상담 내용은 저장하지 않음
+app.MapPost("/api/ai/consult", async (HttpContext context, AiConsultRequest request,
+    AppStore store, AuthService auth, AiConsultationService assistant) =>
 {
     var session = auth.Get(context);
     var issue = store.FindIssue(request.IssueId);
     if (session is null) return Unauthorized();
     if (issue is null) return Error(404, "상담할 문제를 먼저 선택하세요.");
     if (!session.CanAccessLine(issue.LineId)) return Forbidden();
-    return Results.Ok(assistant.Consult(issue, request.Question));
+    return Results.Ok(await assistant.ConsultAsync(session.UserId, issue, request.Question, context.RequestAborted));
 });
+
+// --- 단체 채팅: GET/POST /api/chat/messages --- (자세한 내용은 Infrastructure/GroupChatEndpoints.cs)
+app.MapGroupChat();
 
 // --- 문의 메시지: 읽기 GetIssueMessagesAsync, 보내기 SendIssueMessageAsync ---
 // 문제 한 건에 대한 작업자 문의·관리자 답변 (AI 상담과 별도)

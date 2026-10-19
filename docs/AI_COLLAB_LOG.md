@@ -329,3 +329,28 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
   - 통과: 새 압축 파일을 풀어 원본과 같음(파일 33개, `/` 경로, bin·obj·App_Data·.vs·.user·db 없음).
 - 조원 전달사항: 새 압축 파일로 다시 보내면 주석이 들어간 코드를 받는다. 기능 변화는 없다.
 - 다음 작업: 변화 없음(AI 상담 기록, YOLO, 센서는 팀 확정 대기).
+### 2026-10-19 / Claude / 앱 2개 교체, 공도현 단체 채팅·외부 AI 병합, 시험 중 발견한 3건 수정, 저장소 정리
+
+- 종류: 병합, 구현, 검증, 정리
+- 기준 코드: 이 커밋의 `with-claude/` 전체. `with-claude/`를 김하균님 PC의 `with claude` 폴더 최신본으로 통째로 교체했다(빌드 산출물·DB·채팅 파일·조원용 zip·공도현 원본 묶음 폴더 제외).
+- 내용과 근거(김하균님 결정):
+  1. **앱 교체:** `01_AdminApp`을 조영준 님 새 관리자 앱으로, `02_UserApp`을 장서진 님 새 사용자 앱으로 교체(둘 다 최신 서버 계약에 연결된 버전). 예전 `Form1.cs` 기반 앱은 폐기.
+  2. **단체 채팅 병합(공도현 구현):** `GET/POST /api/chat/messages`, `data/group-chat.json`에 최근 5,000건 JSON 저장. 활성 계정이면 누구나 참여하므로 **관리자가 만든 새 아이디는 자동 참여**. 공용 `ChatContracts.cs`, `GroupChatApiClient.cs`, 공용 화면 `ProductionLine.ChatUI/GroupChatPanel.cs`(두 앱 csproj에 링크).
+  3. **외부 AI 병합(공도현 구현):** `05_AiAssistant`를 공도현 버전으로 교체. `/api/ai/consult`가 `AiConsultationService`(Gemini 기본/OpenAI) → 실패·키 없음·한도 초과 시 매뉴얼 답변. 키는 서버 PC에만(DPAPI 저장 또는 환경변수). `appsettings.json`에 `Ai`·`Gemini`·`OpenAi` 섹션. 작업자 앱은 AI 요청만 35초 대기(`AiConsultationApi.cs`).
+  4. **AI 상담 기록은 저장하지 않음(김하균님 결정).** 서버 DB 표를 만들지 않았고, 장서진 앱이 PC에 대화를 저장하던 기능도 제거했다. `data/ai-events.jsonl`에는 진단 코드만 남는다(질문·답변 없음). 기존 1:1 문의(`IssueMessages`)는 그대로 유지.
+- 시험 중 발견해 고친 것:
+  1. 작업자 앱은 탭 머리를 숨기고 왼쪽 메뉴(5개 고정)로만 이동해서 단체 채팅 화면에 갈 수 없었고, 강제로 열면 `IndexOutOfRangeException`. → `ModernUi.cs`에 메뉴 `06   단체 채팅`·제목·설명 추가, 안 읽은 수를 메뉴에 표시.
+  2. 관리자 앱에서 채팅 창을 한 번도 열지 않으면 채팅판이 부모 없이 `Visible=true`로 판단돼 안 읽은 수가 안 셀 수 있었음. → 채팅 창을 처음부터 숨긴 채로 만들어 둠(`AdminMainForm.cs`).
+  3. 20개 동시 전송 시 15회 중 2회 `UnauthorizedAccessException`으로 503. 윈도우에서 방금 쓴 파일을 백신·색인이 잠깐 잡아 `File.Move` 덮어쓰기가 거절됨. → `GroupChatStore.cs`에 짧은 대기 후 최대 10회 재시도(`MoveWithRetry`).
+- 문서 정리: `md파일`에서 이미 반영된 앱 연결 안내 6개 삭제, 옛 DB 문서 3개(`DB_저장내용`, `DB_클래스_7개`, `DB_클래스_8개`)는 지금 코드 기준 `DB_구조_정리_2026-10-19.md` 하나로 합침(RequestLogs·파일 저장 위치 반영). 프로젝트 소개 README를 `with-claude/README.md`로 옮겨 최신화, 서버·AI·관리자 폴더 README 갱신. 서버 기능 정리·할 일 md에 채팅·AI 반영.
+- 다른 의견 또는 영향: 장서진 앱 메뉴(`ModernUi.cs`, `UserMainForm.cs`), 조영준 앱(`AdminMainForm.cs`, csproj), 공도현 파일(`GroupChatStore.cs`)을 일부 고쳤으므로 각자에게 알려야 한다. 공용 파일이 3개 늘었다.
+- 현재 상태: 완료(실제 Gemini 키 시험과 두 PC 시험 제외)
+- 검증:
+  - 통과: 솔루션 전체 `dotnet build` 경고 0, 오류 0.
+  - 통과: 임시 서버 API 시험 18개(채팅 인증·송수신·중복 방지·새 아이디 자동 참여·비활성화 401·키 없이 AI→매뉴얼·AI 이벤트에 질문 없음·1:1 문의·상태 순서 409).
+  - 통과: 공도현 `ProductionLine.AiAssistant.SmokeTests` 192개(오프라인).
+  - 통과: 공도현 `GroupChat.SmokeTests`(양방향, 재전송 중복 없음, 20개 동시 전송, 비로그인 거절) 수정 후 30회 반복 모두 통과, 채팅 파일 663건 번호 중복 0.
+  - 통과: 실제 관리자·작업자 WinForms 창을 띄운 화면 시험 17개(메뉴 이동, 양방향 전달, 안 읽은 수 표시·해제, 창 닫아도 수신, 새 아이디 참여, AI 답변 표시, PC에 대화 저장 안 됨).
+  - 미실행: 실제 Gemini/OpenAI 키 응답, 사람이 직접 조작, 두 PC 통신.
+- 조원 전달사항: 공도현 — 병합 완료, `GroupChatStore` 재시도 추가. 장서진 — `06 단체 채팅` 메뉴, AI 35초 대기, AI 대화 PC 저장 제거. 조영준 — `단체 채팅` 버튼. 공용 파일 `ChatContracts.cs`, `GroupChatApiClient.cs`, `ChatUI/GroupChatPanel.cs` 추가.
+- 다음 작업: Gemini 키로 실제 응답 확인, 두 PC 통합 시험, YOLO·센서 팀 확정 대기.

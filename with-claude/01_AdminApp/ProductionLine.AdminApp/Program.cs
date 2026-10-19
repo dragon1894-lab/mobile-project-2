@@ -1,16 +1,14 @@
-namespace ProductionLine.AdminApp;
-
-static class Program
+﻿using _01_AdminApp.Services;
+using ProductionLine.Shared;
+namespace _01_AdminApp;
+internal static class Program
 {
-    /// <summary>
-    ///  The main entry point for the application.
-    /// </summary>
     [STAThread]
     static void Main()
     {
-        // To customize application configuration such as set high DPI settings or default font,
-        // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
-        Application.Run(new AdminLoginForm());
-    }    
+        using var api = new ProductionLineApiClient();
+        Application.Run(new AdminLoginForm(new ApiAdminAuthService(api),
+            new ApiDashboardService(api), new ApiLineDetailService(api), new ApiUserService(api), api));
+    }
 }
