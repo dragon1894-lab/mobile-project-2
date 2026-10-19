@@ -13,6 +13,8 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+  <!-- 화면 배율(예: 175%)에서 글자가 잘리지 않도록 100% 기준 화면을 윈도우가 키워서 보여 줌 (김하균) -->
+    <ApplicationHighDpiMode>DpiUnawareGdiScaled</ApplicationHighDpiMode>
   </PropertyGroup>
 
 </Project>

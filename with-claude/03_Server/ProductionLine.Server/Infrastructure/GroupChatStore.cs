@@ -1,4 +1,6 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Unicode;
 using ProductionLine.Shared;
 
 namespace ProductionLine.Server.Infrastructure;
@@ -8,7 +10,12 @@ public sealed class GroupChatStore
     private const int Retention = 5000;
     private readonly object _gate = new();
     private readonly string _path;
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    // 파일을 메모장으로 열어도 읽히도록: 한글은 그대로, 메시지마다 줄바꿈 (김하균 변경)
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+        WriteIndented = true
+    };
     private ChatData _data;
 
     public GroupChatStore(IHostEnvironment environment)
@@ -62,7 +69,7 @@ public sealed class GroupChatStore
                 return previous;
             }
             var message = new ChatMessageDto(checked(_data.LastId + 1), request.ClientMessageId, sender.Id,
-                string.IsNullOrWhiteSpace(sender.Name) ? sender.Id : sender.Name, sender.Role, text!, DateTimeOffset.UtcNow);
+                string.IsNullOrWhiteSpace(sender.Name) ? sender.Id : sender.Name, sender.Role, text!, DateTimeOffset.Now); // 보낸 시각을 한국 시간(+09:00)으로 저장
             var next = new ChatData(message.Id, _data.Messages.Append(message).TakeLast(Retention).ToList());
             // 저장에 성공한 뒤 메모리에도 반영한다. 응답이 유실돼도 같은 전송 ID로 중복 없이 재시도할 수 있다.
             var temp = _path + ".tmp";

@@ -55,6 +55,8 @@ public sealed class AppStore
 
             using var db = _contextFactory.CreateDbContext();
             var id = request.Id.Trim();
+            if (!IsValidUserId(id))
+                throw new ArgumentException("사용자 ID는 영어·숫자·_·-만 사용해 3~20자로 입력하세요. (한글·전각 문자 불가)");
             if (FindUser(db, id) is not null)
                 throw new InvalidOperationException("이미 사용 중인 사용자 ID입니다.");
 
@@ -358,6 +360,10 @@ public sealed class AppStore
     private static UserEntity? FindUser(AppDbContext db, string id) =>
         // 기존 사용자 ID의 OrdinalIgnoreCase 비교 규칙을 유지합니다.
         db.Users.AsEnumerable().FirstOrDefault(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    // 새 사용자 ID 규칙: 영어(반각)·숫자·_·- 만, 3~20자. 전각 'ｔｅｓｔ１'처럼 로그인 때 다시 치기 어려운 ID를 막음
+    private static bool IsValidUserId(string id) =>
+        id.Length is >= 3 and <= 20 && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-');
 
     // 사용자에게 줄 라인 번호가 모두 실제로 있는 라인인지 확인 (없는 번호면 400)
     private static int[] ValidateLineIds(AppDbContext db, IReadOnlyList<int>? requested)
