@@ -97,15 +97,20 @@ python .\with-claude-yolo-training\fix_orientation.py --src "$desk\아이폰 깨
 몇 장을 열어 방향이 맞는지 확인. 건너뛴 파일이 있으면 사용자에게 알림.
 
 ### 4단계. 학습 툴 빌드·실행 → 사용자가 20~30장 라벨링
+**사용자는 창의 버튼만 누르면 되도록 Claude가 미리 준비합니다.** 툴의 "사진 가져오기"는 사진을 프로젝트 `images\`로 복사하는 것뿐이므로(`YoloProject.ImportImages`), Claude가 정리된 사진을 미리 복사해 두면 사용자는 **프로젝트 열기 한 번**으로 사진이 다 들어온 상태에서 시작합니다. (툴은 실행 인수로 프로젝트를 받지 않으므로 "프로젝트 열기"는 사용자가 눌러야 함.)
 ```powershell
+# 1) 정리된 사진을 프로젝트 images 폴더로 복사 (2단계에서 만든 crack_iphone 안에 images 폴더 생성)
+New-Item -ItemType Directory -Force "$desk\crack_iphone\images" | Out-Null
+Copy-Item "$desk\crack_iphone_사진정리\*.jpg" "$desk\crack_iphone\images\"
+# 2) 학습 툴 빌드 후 창 띄우기
 dotnet build ".\with-claude-yolo-training\06_TrainingTool\ProductionLine.TrainingTool\ProductionLine.TrainingTool.csproj"
 Start-Process ".\with-claude-yolo-training\06_TrainingTool\ProductionLine.TrainingTool\bin\Debug\net8.0-windows\ProductionLine.TrainingTool.exe"
 ```
-사용자에게 안내:
-1. **프로젝트 열기** → `바탕화면\crack_iphone` (오른쪽 클래스 목록에 `crack_iphone`이 보이는지 확인)
-2. **사진 가져오기** → `crack_iphone_사진정리` 폴더의 사진 전부
-3. 서로 다른 모습의 사진 **20~30장**에: 휴대폰 뒷면 전체 = `crack_iphone`, 깨진 부위 = `crack` 박스 → `Ctrl+S`
-4. 끝나면 알려 달라고 하기
+사용자에게 안내 (쉬운 말로):
+1. 뜬 창에서 **프로젝트 열기** → `바탕화면\crack_iphone` 선택 → 왼쪽에 사진 목록, 오른쪽 클래스 목록에 `crack_iphone`이 보이는지 확인 (사진 가져오기는 안 눌러도 됨)
+2. 서로 다른 모습의 사진 **20~30장**을 골라: 오른쪽에서 `crack_iphone` 고르고 **휴대폰 뒷면 전체**를 드래그 → `crack` 고르고 **깨진 부위**를 드래그(여러 군데면 여러 개) → `Ctrl+S` → **다음 ▶**
+3. 박스를 잘못 그리면 박스를 클릭하고 **선택 박스 삭제**
+4. 끝나면 Claude에게 알려 달라고 하기 (창은 닫지 않아도 됨)
 
 ### 5단계. 도우미 모델 학습 (짧게)
 1. 사용자에게 툴의 **학습 데이터 만들기** 클릭을 부탁(라벨한 20~30장만 들어감).
