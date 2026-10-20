@@ -3,8 +3,46 @@ from collections import Counter, defaultdict
 from pathlib import Path
 import numpy as np, cv2, onnx, onnxruntime as ort
 
-ROOT = Path(sys.argv[1])
-AP = ROOT / 'training/all_phones_20261020'
+"""all_phones 데이터 점검 + 인식률 평가.
+
+GitHub 저장소에서 (인수 없이) 실행:
+    python all_phones/from_local_pc_20261020/scripts/eval_allphones.py
+    python all_phones/from_local_pc_20261020/scripts/eval_allphones.py --model 다른모델.onnx --data 다른데이터폴더
+필요 패키지: numpy, opencv-python, onnx, onnxruntime
+"""
+import argparse
+
+HERE = Path(__file__).resolve().parent.parent          # from_local_pc_20261020
+parser = argparse.ArgumentParser()
+parser.add_argument('root', nargs='?', help='(컨베이어 PC 전용) 프로젝트 루트')
+parser.add_argument('--data', help='images/labels/classes.txt가 있는 폴더 (기본: all_phones)')
+parser.add_argument('--model', help='평가할 ONNX (기본: <data>/models/best.onnx)')
+args = parser.parse_args()
+if args.root:  # 컨베이어 PC 원래 폴더 구조
+    ROOT = Path(args.root)
+    AP = Path(args.data) if args.data else ROOT / 'training/all_phones_20261020'
+    OLD_DIRS = {
+        '12Pro 실버 107장': ROOT / 'imports/phone-models-20261020/iphone_12pro_silver/images',
+        '14 화이트 50장(옛)': ROOT / 'imports/phone-models-20261020/iphone_14_white/images',
+        '16 화이트 72장': ROOT / 'imports/phone-models-20261020/iphone16_white/images',
+        '파손 crack_phone 61장': ROOT / 'imports/three-model-merge-20261019-145921/broken_phone/broken_phone/images',
+        '12ProMax 파손 60장': ROOT / 'imports/phone-models-20261020/iphone_12_pro_max_Crack/images',
+        '컨베이어 실사진 8장': ROOT / 'images',
+    }
+    BG = ROOT / '04_Vision/models/background/empty_belt_reference.jpg'
+else:          # GitHub 저장소 구조: all_phones/from_local_pc_20261020/scripts/
+    AP = Path(args.data) if args.data else HERE.parent
+    O = HERE / 'old_datasets'
+    OLD_DIRS = {
+        '12Pro 실버 107장': O / 'iphone_12pro_silver_107/images',
+        '14 화이트 50장(옛)': O / 'iphone_14_white_50/images',
+        '16 화이트 72장': O / 'iphone_16_white_72/images',
+        '파손 crack_phone 61장': O / 'crack_phone_61/images',
+        '12ProMax 파손 60장': O / 'iphone_12_pro_max_crack_60/images',
+        '컨베이어 실사진 8장': HERE / 'conveyor_real_8/images',
+    }
+    BG = None  # 빈 벨트 기준 사진은 저장소에 없음
+MODEL = Path(args.model) if args.model else AP / 'models/best.onnx'
 EXT = {'.jpg', '.jpeg', '.png', '.bmp'}
 CLASSES = [c.strip() for c in (AP / 'classes.txt').read_text(encoding='utf-8-sig').splitlines() if c.strip()]
 CONF, IOU = 0.45, 0.45
@@ -73,20 +111,11 @@ leak_by = Counter(CLASSES[int(labels[AP / 'images' / n][0][0])] for n in near_le
 print('  거의 같은 것 클래스별', dict(leak_by))
 
 # overlap with local old datasets
-print('\n=== 2. 이 PC의 옛 데이터가 all_phones에 들어갔는지 ===')
+print('\n=== 2. 옛 데이터가 평가 대상 데이터에 들어갔는지 ===')
 ap_hash = set(hashes.values()); ap_dh = list(dh.values())
-OLD = {
-    '12Pro 실버 107장': 'imports/phone-models-20261020/iphone_12pro_silver/images',
-    '14 화이트 50장(옛)': 'imports/phone-models-20261020/iphone_14_white/images',
-    '14 화이트 159장(추가학습)': '04_Vision/models/alternatives/' + next(d.name for d in (ROOT / '04_Vision/models/alternatives').iterdir() if d.name.startswith('11_')) + '/dataset/images',
-    '16 화이트 72장': 'imports/phone-models-20261020/iphone16_white/images',
-    '파손 crack_phone 61장': 'imports/three-model-merge-20261019-145921/broken_phone/broken_phone/images',
-    '12ProMax 파손 60장': 'imports/phone-models-20261020/iphone_12_pro_max_Crack/images',
-    '컨베이어 실사진 8장': 'images',
-}
 old_files = {}
-for k, rel in OLD.items():
-    fs = [p for p in (ROOT / rel).rglob('*') if p.suffix.lower() in EXT]
+for k, folder in OLD_DIRS.items():
+    fs = sorted(p for p in folder.rglob('*') if p.suffix.lower() in EXT) if folder.exists() else []
     old_files[k] = fs
     same = sum(hashlib.sha256(p.read_bytes()).hexdigest() in ap_hash for p in fs)
     near = 0
@@ -96,7 +125,7 @@ for k, rel in OLD.items():
     print(f'  {k:24s} 파일 {len(fs):4d} | 똑같은 파일 포함 {same:4d} | 거의 같은 사진 포함 {near:4d}')
 
 # ---------- 3. model ----------
-model = AP / 'models/best.onnx'
+model = MODEL
 meta = {p.key: p.value for p in onnx.load(str(model), load_external_data=False).metadata_props}
 names = ast.literal_eval(meta['names']); names = [names[i] for i in sorted(names)]
 sess = ort.InferenceSession(str(model), providers=['CPUExecutionProvider'])
@@ -159,8 +188,8 @@ for k, exp in expect.items():
     if not fs: print(f'  {k}: 전부 all_phones에 포함 → 생략'); continue
     res = Counter(verdict(detect(imread(p))) for p in fs)
     print(f'  {k:24s} 대상 {len(fs):3d}장, 기대 {exp:28s} 정답 {res[exp]:3d} = {res[exp] / len(fs):6.1%}  결과 {dict(res)}')
-bg = ROOT / '04_Vision/models/background/empty_belt_reference.jpg'
-print('  빈 벨트 사진:', verdict(detect(imread(bg))), '| 검은 화면:', verdict(detect(np.zeros((1080, 1920, 3), np.uint8))))
+print('  빈 벨트 사진:', verdict(detect(imread(BG))) if BG and BG.exists() else '(사진 없음)',
+      '| 검은 화면:', verdict(detect(np.zeros((1080, 1920, 3), np.uint8))))
 for p in sorted(old_files['컨베이어 실사진 8장']):
     d = detect(imread(p))
     print('   ', p.name, [(CLASSES[c], round(cf, 2), int((b[2] - b[0]))) for b, c, cf in d])

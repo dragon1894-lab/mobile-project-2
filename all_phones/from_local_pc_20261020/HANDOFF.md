@@ -22,7 +22,7 @@
 | 위에서 학습 사진과 거의 같은 것 제외 | 60 | 각 정답 | 100% | 전부 정답 (그래도 같은 출처) |
 | `old_datasets/iphone_12pro_silver_107` (실제 사진) | 107 | iphone_12_pro_silver | **0.9%** | 15Pro 62, 16white 12, 검출없음 25, crack 7 |
 | `old_datasets/iphone_14_white_50` | 50 | iphone_14_white | **0%** | 16white 35, 15Pro 15 |
-| `old_datasets/iphone_16_white_72` (68장, 중복 제외 전 72) | 72 | iphon16_white | **6.9%** | 14white 41, 15Pro 22, crack 3 |
+| `old_datasets/iphone_16_white_72` (중복 4장 뺀 68장) | 68 | iphon16_white | **5.9%** | 14white 41, 15Pro 19, crack 3, 검출없음 1 |
 | `old_datasets/crack_phone_61` | 61 | crack_iphone | 98.4% | 1장 검출없음 |
 | `old_datasets/iphone_12_pro_max_crack_60` | 60 | crack_iphone | 100% | |
 | `conveyor_real_8` | 8 | 아래 표 | — | 파손 오검출 4 |
@@ -63,7 +63,14 @@ all_phones 클래스: `0 crack_iphone, 1 iphon16_white, 2 iphone_12_pro_silver, 
 
 ## 4. 할 일 (순서대로)
 
-1. **같은 결과가 나오는지 확인**: `scripts/eval_allphones.py`는 원래 컨베이어 PC 폴더 구조 기준으로 경로가 적혀 있습니다(`OLD` 딕셔너리, `training/all_phones_20261020`). 이 폴더 구조에 맞게 경로만 바꿔 실행하고 2번 표와 같은지 확인하세요.
+1. **같은 결과가 나오는지 확인** (저장소 최상위 폴더에서, 경로 수정 없이 바로 실행됨. CPU로 약 2~3분):
+   ```powershell
+   pip install numpy opencv-python onnx onnxruntime   # 없을 때만
+   python -X utf8 all_phones/from_local_pc_20261020/scripts/eval_allphones.py
+   ```
+   `results/all_phones_eval_20261020.txt`(컨베이어 PC 출력)와 같은 수치가 나와야 합니다. 이 저장소 구조 그대로 컨베이어 PC에서 실행해 2번 표와 같은 결과를 확인했습니다.
+   새로 학습한 모델은 `--model 새모델.onnx --data 새데이터폴더`로 같은 방식으로 평가합니다(`--data` 폴더에 `images/ labels/ classes.txt` 필요).
+   주의: 5번 "컨베이어 실사진 8장" 줄의 "기대 15 Pro"는 편의상 값입니다. 실제 정답은 2번의 사진별 표를 보세요.
 2. **데이터 합치기**: `all_phones/images`, `labels`를 건드리지 말고 새 폴더(예: `all_phones_v2/`)에 all_phones + 이 폴더 데이터를 3번 표대로 번호를 바꿔 합칩니다.
 3. **분할을 출처·촬영 단위로**: 파일 이름 해시 대신, 원래 폴더(출처) 또는 거의 같은 사진 묶음(dHash 군집) 단위로 학습/검증을 나눠 **거의 같은 사진이 양쪽에 들어가지 않게** 합니다. 완전히 같은 파일 61개 중복도 제거합니다. 가능하면 출처 하나를 통째로 테스트용으로 남겨 두세요(예: `old_datasets/iphone_12pro_silver_107` 일부).
 4. **(권장) 박스 기준 통일**: 기종 사진의 카메라 모듈 박스(폰 박스 안, 면적 5~18%)를 지우고 폰 전체 박스 1개로. 파손은 폰 전체를 `crack_iphone` 1개로 하거나 깨진 부위를 **다른 번호**(예: 5 `crack_area`)로 분리. 지금은 같은 이름 박스가 2개씩 나와서 앱에서 위치·개수 처리가 복잡해집니다. 사용자와 합의 후 진행하세요.
