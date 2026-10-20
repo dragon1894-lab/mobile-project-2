@@ -1,0 +1,28 @@
+{
+  "path": "weights/best.onnx",
+  "input_name": "images",
+  "input_shape": [
+    1,
+    3,
+    416,
+    416
+  ],
+  "output_name": "output0",
+  "output_shape": [
+    1,
+    5,
+    3549
+  ],
+  "opset": 17,
+  "checked": true,
+  "max_absolute_difference_vs_pytorch": 0.000885009765625,
+  "max_class_score_difference_vs_pytorch": 5.304813385009766e-06,
+  "cpu_inference_mean_ms_20_runs": 14.05,
+  "benchmark_includes_camera_or_preprocessing": false,
+  "class_id": 0,
+  "class_name": "phone",
+  "preprocess": "BGR camera image -> centered letterbox with gray 114 -> RGB -> float32/255 -> NCHW",
+  "postprocess": "Rows cx,cy,w,h,class_score in input pixels; apply confidence threshold and NMS, then undo letterbox.",
+  "classificationAvailable": false,
+  "sha256": "a81ccd89ab1b8f27b9f65795fd0bc7c7016c26ed72e12686c00d065da5980a17"
+}

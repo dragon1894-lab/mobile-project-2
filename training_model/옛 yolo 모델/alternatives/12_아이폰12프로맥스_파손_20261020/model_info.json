@@ -1,0 +1,11 @@
+{
+  "classes": ["target_iphone", "other_phone", "crack", "iphone_12_pro_max_Crack"],
+  "classificationAvailable": false,
+  "sha256": "548ed8c6c60e9f16757a02ffee1a8efb2ad46e80600a2a7a644a0b9e34c94fb7",
+  "source": "iphone_12_pro_max_Crack.zip",
+  "sourceDatasetIncluded": true,
+  "datasetImages": 60,
+  "combinedDamageClass": "crack_phone",
+  "combinedModelClass": "iphone_12_pro_max",
+  "importedAt": "2026-10-20"
+}

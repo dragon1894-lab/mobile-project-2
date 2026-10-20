@@ -1,0 +1,22 @@
+{
+  "sourceArchive": "models.zip",
+  "classes": [
+    "target_iphone",
+    "other_phone",
+    "crack"
+  ],
+  "inputShape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "outputShape": [
+    1,
+    7,
+    8400
+  ],
+  "classificationAvailable": false,
+  "sha256": "b4f59147db037ea52ad90813c78454d46570d269c8d9181bc283db276eb96806",
+  "note": "원본 학습 라벨·품질 검증 자료가 제공되지 않아 품질 판정은 비활성화. 휴대폰 위치 검출로 사용."
+}

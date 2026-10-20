@@ -1,0 +1,32 @@
+{
+  "sourceArchive": "새 폴더 (3).zip",
+  "classes": [
+    "target_iphone",
+    "other_phone",
+    "crack",
+    "iphone_16",
+    "iphone_15",
+    "iphone_15_pro"
+  ],
+  "inputShape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "outputShape": [
+    1,
+    10,
+    8400
+  ],
+  "classificationAvailable": false,
+  "trainedClassIdsInProvidedLabels": [
+    3,
+    5
+  ],
+  "providedTrainingImages": 3,
+  "providedValidationImages": 1,
+  "confidenceThreshold": 0.5,
+  "sha256": "a38e3f740e0017251f3dd186bc1bf4dd15df98f70f979b4c9252a23fde9509eb",
+  "note": "기종 검출 모델. 허용 기종 기준과 깨짐·다른 휴대폰 검증 미완료. 정상/불량 판정 비활성화."
+}

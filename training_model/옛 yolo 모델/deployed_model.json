@@ -1,0 +1,8 @@
+{
+  "deployedAt": "2026-10-19T11:32:20.6101729+09:00",
+  "source": "C:\\Users\\moble\\OneDrive\\문서\\카카오톡 받은 파일",
+  "backup": "04_Vision\\models\\alternatives\\03_휴대폰전체검출_적용전백업",
+  "sha256": "ffb43c9b651d6d50885802afa3c33500d693be16cb48c4be5fcb07fb276a7dba",
+  "classes": ["target_iphone", "other_phone", "crack", "crack_phone"],
+  "independent_test_available": false
+}

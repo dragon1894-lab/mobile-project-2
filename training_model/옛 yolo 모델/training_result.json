@@ -1,0 +1,12 @@
+{
+  "imported": true,
+  "source_onnx": "C:\\Users\\moble\\OneDrive\\문서\\카카오톡 받은 파일\\best.onnx",
+  "source_pt": "C:\\Users\\moble\\OneDrive\\문서\\카카오톡 받은 파일\\best.pt",
+  "embedded_training_data": "C:\\Users\\moble\\Desktop\\broken_phone\\dataset\\data.yaml",
+  "classes": ["target_iphone", "other_phone", "crack", "crack_phone"],
+  "imgsz": 448,
+  "onnx_sha256": "ffb43c9b651d6d50885802afa3c33500d693be16cb48c4be5fcb07fb276a7dba",
+  "pt_sha256": "4ba412df4a9e428f9cfdc3b4b33c4fc703f86d473c21755abf38d0a7aa71d01f",
+  "training_metrics_available": false,
+  "independent_test_available": false
+}

@@ -1,0 +1,13 @@
+{
+  "classes": ["target_iphone", "other_phone", "crack", "iphone16_white"],
+  "classificationAvailable": false,
+  "inputShape": [1, 3, 448, 448],
+  "outputShape": [1, 8, 4116],
+  "sha256": "3efa94093e7d6ab2e79f5440023be516410e65712ccb3a9d6a2cbec37d69b015",
+  "source": "iphone16_white.zip / iphone16_white/models/best.onnx",
+  "trainingEpochs": 100,
+  "trainingImages": 55,
+  "validationImages": 14,
+  "sourceDatasetIncluded": true,
+  "note": "iphone16_white 기종·색상 검출용입니다. 원본 69장은 training/iphone16_white_20261019에 보존했습니다."
+}

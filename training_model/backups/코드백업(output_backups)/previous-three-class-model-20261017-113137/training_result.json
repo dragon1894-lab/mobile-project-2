@@ -1,0 +1,9 @@
+{
+  "model": "yolo26n.pt",
+  "data": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\dataset\\data.yaml",
+  "epochs": 100,
+  "imgsz": 640,
+  "device": "auto",
+  "best_pt": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\models\\best.pt",
+  "best_onnx": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\models\\best.onnx"
+}

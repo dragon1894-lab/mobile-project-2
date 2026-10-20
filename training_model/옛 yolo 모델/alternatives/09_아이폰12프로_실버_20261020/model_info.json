@@ -1,0 +1,9 @@
+{
+  "classes": ["target_iphone", "other_phone", "crack", "iphone_12pro_silver"],
+  "classificationAvailable": false,
+  "sha256": "c3bd3baf04cf5e77b0dc0016b6e7ecfccf07196fb6f7c748a40eb36c63f6022d",
+  "source": "iphone_12pro_silver.7z",
+  "sourceDatasetIncluded": true,
+  "datasetImages": 107,
+  "importedAt": "2026-10-20"
+}

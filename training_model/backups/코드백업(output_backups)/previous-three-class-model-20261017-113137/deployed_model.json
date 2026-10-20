@@ -1,0 +1,9 @@
+{
+  "source": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\models\\best.onnx",
+  "deployedTo": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\04_Vision\\models\\best.onnx",
+  "sha256": "5299F1EF7C64568D0A07F189FD9A7B73A4C807685669BFF8BA6CD7C0EF91B223",
+  "backupDirectory": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\output\\backups\\model-before-second-training-20261017-112048",
+  "updatedAt": "2026-10-17T11:20:48.8635640+09:00",
+  "epochs": 100,
+  "imageSize": 640
+}

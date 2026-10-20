@@ -1,0 +1,9 @@
+{
+  "deployedAt": "2026-10-19T11:05:21.638086+09:00",
+  "source": "training\\full_phone_detector_20261019\\models",
+  "backup": "output\\backups\\before-full-phone-20261019-110520.zip",
+  "sha256": "03662fa055bd16b431b93c0bbb4e2ee8fccf751710bf6ec9ac9d7e7bbf366a50",
+  "annotationTarget": "full_handset_body",
+  "independent_test_available": false,
+  "validation": "training\\full_phone_detector_20261019\\evaluation.json"
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "path": "04_Vision/models/best.onnx",
+    "sha256": "ffb43c9b651d6d50885802afa3c33500d693be16cb48c4be5fcb07fb276a7dba"
+  },
+  {
+    "path": "04_Vision/models/alternatives/01_기존_3클래스/best.onnx",
+    "sha256": "b4f59147db037ea52ad90813c78454d46570d269c8d9181bc283db276eb96806"
+  },
+  {
+    "path": "04_Vision/models/alternatives/02_기종검출_카메라영역/best.onnx",
+    "sha256": "a38e3f740e0017251f3dd186bc1bf4dd15df98f70f979b4c9252a23fde9509eb"
+  },
+  {
+    "path": "04_Vision/models/alternatives/03_휴대폰전체검출_적용전백업/best.onnx",
+    "sha256": "03662fa055bd16b431b93c0bbb4e2ee8fccf751710bf6ec9ac9d7e7bbf366a50"
+  },
+  {
+    "path": "04_Vision/models/alternatives/04_아이폰12프로_기종색상/best.onnx",
+    "sha256": "c84fd688ee00a1feb51bbe8344cfa31b2f56a4844f17e2d0b7a962484611a37b"
+  },
+  {
+    "path": "04_Vision/models/alternatives/05_이전_휴대폰위치검출/best.onnx",
+    "sha256": "a81ccd89ab1b8f27b9f65795fd0bc7c7016c26ed72e12686c00d065da5980a17"
+  },
+  {
+    "path": "04_Vision/models/alternatives/06_휴대폰전체검출_재학습/best.onnx",
+    "sha256": "7fde10d3b31bad9e326de9d2b956662121246f912b221ddc74df5fd61690ea1c"
+  },
+  {
+    "path": "04_Vision/models/alternatives/07_아이폰14_화이트/best.onnx",
+    "sha256": "0f14e6fff1c74a347f5641481ed1efa11c25b4b2732317a89c105798b8f8284d"
+  },
+  {
+    "path": "04_Vision/models/alternatives/08_아이폰16_화이트/best.onnx",
+    "sha256": "3efa94093e7d6ab2e79f5440023be516410e65712ccb3a9d6a2cbec37d69b015"
+  }
+]

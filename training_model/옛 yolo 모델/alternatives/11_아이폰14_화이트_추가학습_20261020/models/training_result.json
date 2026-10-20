@@ -1,0 +1,9 @@
+{
+  "model": "yolo26n.pt",
+  "data": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\04_Vision\\models\\alternatives\\11_아이폰14_화이트_추가학습_20261020\\dataset\\data.yaml",
+  "epochs": 100,
+  "imgsz": 640,
+  "device": "auto",
+  "best_pt": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\04_Vision\\models\\alternatives\\11_아이폰14_화이트_추가학습_20261020\\models\\best.pt",
+  "best_onnx": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\04_Vision\\models\\alternatives\\11_아이폰14_화이트_추가학습_20261020\\models\\best.onnx"
+}

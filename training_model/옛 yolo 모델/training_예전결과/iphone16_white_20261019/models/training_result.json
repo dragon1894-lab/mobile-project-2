@@ -1,0 +1,9 @@
+{
+  "model": "yolo26n.pt",
+  "data": "C:\\Users\\moble\\Desktop\\iphone16_white\\dataset\\data.yaml",
+  "epochs": 100,
+  "imgsz": 448,
+  "device": "auto",
+  "best_pt": "C:\\Users\\moble\\Desktop\\iphone16_white\\models\\best.pt",
+  "best_onnx": "C:\\Users\\moble\\Desktop\\iphone16_white\\models\\best.onnx"
+}

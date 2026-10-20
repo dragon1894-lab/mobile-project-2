@@ -1,0 +1,353 @@
+﻿using ProductionLine.Shared;
+using ProductionLine.Vision;
+
+namespace ProductionLine.UserApp;
+
+public sealed partial class UserMainForm
+{
+    private ICameraFeed? _camera;
+    private Task _cameraClosed = Task.CompletedTask;
+    private readonly NumericUpDown _cameraIndex = new() { Minimum = 0, Maximum = 9, Width = 55 };
+    private readonly Button _cameraConnect = new() { Text = "카메라 연결", AutoSize = true };
+    private readonly Button _inspectionStart = new() { Text = "검사 시작", AutoSize = true };
+    private readonly Label _inspectionState = new() { AutoSize = true, Text = "검사 대기 · 카메라 연결 후 YOLO 모델을 확인하세요.", Padding = new Padding(8) };
+    private const int InspectionIntervalMs = 100;
+    private readonly System.Windows.Forms.Timer _inspectionTimer = new() { Interval = InspectionIntervalMs };
+    private YoloOnnxInspector? _yoloInspector;
+    private string? _selectedYoloModelPath;
+    private const float PhoneConfidenceThreshold = 0.45f;
+    private long _displayedFrame, _inspectedFrame;
+    private bool _runningInspection, _inspectionBusy;
+    private bool _productPresent;
+    private DateTime _lastProductSeenUtc;
+    private int _inspectionGeneration;
+    private readonly PictureBox _recognizedVideo = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(20, 30, 42) };
+    private readonly Label _recognizedCaption = new() { Dock = DockStyle.Fill, Text = "마지막 인식 제품 · 대기 중", AutoEllipsis = true };
+    private int _recognizedProductNumber;
+
+    private Control RecognitionVideoPanels()
+    {
+        var panels = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        panels.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65));
+        panels.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+        panels.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+        panels.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        panels.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "실시간 카메라 · 연속 검출" }, 0, 0);
+        panels.Controls.Add(_recognizedCaption, 1, 0);
+        panels.Controls.Add(_video, 0, 1);
+        panels.Controls.Add(_recognizedVideo, 1, 1);
+        return panels;
+    }
+
+    private void ResetRecognizedResult()
+    {
+        _recognizedVideo.Image?.Dispose();
+        _recognizedVideo.Image = null;
+        _recognizedProductNumber = 0;
+        _recognizedCaption.Text = "마지막 인식 제품 · 대기 중";
+        _result.Text = "인식 대기 중 · 휴대폰이 인식되면 결과가 표시됩니다.";
+        _result.ForeColor = UserTheme.Text;
+    }
+
+    private Control CameraControls()
+    {
+        var container = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 5, ColumnCount = 1 };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false, AutoScroll = true };
+        buttons.Controls.Add(new Label { Text = "카메라 번호", AutoSize = true, Padding = new Padding(0, 5, 0, 0) });
+        buttons.Controls.Add(_cameraIndex);
+        buttons.Controls.Add(_cameraConnect);
+        buttons.Controls.Add(Button("연결 해제", DisconnectCamera));
+        buttons.Controls.Add(_inspectionStart);
+        buttons.Controls.Add(Button("검사 중지", () => StopInspection("검사 중지 · 전송 중인 1건은 완료될 수 있습니다.")));
+        var models = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false, AutoScroll = true };
+        models.Controls.Add(Button("YOLO 모델 확인", CheckYoloModel));
+        models.Controls.Add(Button("전체 학습 사용", LoadAllYoloModels));
+        models.Controls.Add(Button("YOLO 모델 선택", SelectYoloModel));
+        models.Controls.Add(_arduinoSetup);
+        models.Controls.Add(new Label { Text = "모델 변경은 검사 중지 후 가능합니다.", AutoSize = true, Padding = new Padding(8) });
+        container.Controls.Add(buttons, 0, 0);
+        container.Controls.Add(models, 0, 1);
+        container.Controls.Add(BuildConveyorControls(), 0, 2);
+        container.Controls.Add(_conveyorState, 0, 3);
+        container.Controls.Add(_inspectionState, 0, 4);
+        _cameraConnect.Click += (_, _) => ConnectCamera();
+        _inspectionStart.Click += async (_, _) => await StartInspectionAsync();
+        _inspectionTimer.Tick += async (_, _) => await InspectCameraAsync();
+        return container;
+    }
+
+    private void ConnectCamera()
+    {
+        if (_camera != null) return;
+        if (!_cameraClosed.IsCompleted) { _videoStatus.Text = "이전 카메라 연결을 해제하는 중입니다. 잠시 후 다시 연결하세요."; return; }
+        _displayedFrame = _inspectedFrame = 0;
+        _productPresent = false;
+        _lastProductSeenUtc = default;
+        ResetRecognizedResult();
+        _camera = new CameraSession((int)_cameraIndex.Value);
+        _cameraConnect.Enabled = false; _cameraIndex.Enabled = false;
+        _videoStatus.Text = "카메라 연결 중...";
+        _frames.Interval = 50;
+    }
+
+    private void DisconnectCamera()
+    {
+        StopInspection("검사 대기 · 카메라를 다시 연결하세요.");
+        var old = _camera; _camera = null;
+        if (old != null) { old.Dispose(); _cameraClosed = old.Completion; }
+        _productPresent = false;
+        _lastProductSeenUtc = default;
+        _cameraConnect.Enabled = true; _cameraIndex.Enabled = true;
+        _video.Image?.Dispose(); _video.Image = null;
+        _videoStatus.Text = "카메라 연결 해제됨";
+        _frames.Interval = 500;
+    }
+
+    private void DisplayCameraFrame()
+    {
+        if (_camera == null) return;
+        if (_camera.Error is string error)
+        {
+            DisconnectCamera(); _videoStatus.Text = error; return;
+        }
+        var frame = _camera.Latest;
+        if (frame == null) return;
+        if ((DateTime.UtcNow - frame.ReceivedUtc).TotalSeconds > 3)
+        {
+            StopInspection("영상 수신 지연으로 검사 중지");
+            _videoStatus.Text = "카메라 영상이 3초 이상 갱신되지 않았습니다."; return;
+        }
+        // 검사 중에는 YOLO 결과 프레임을 표시합니다. 원본 영상이 박스를 덮어쓰지 않게 합니다.
+        if (_runningInspection) return;
+        if (frame.Sequence == _displayedFrame) return;
+        using var stream = new MemoryStream(frame.Jpeg);
+        using var source = Image.FromStream(stream);
+        var old = _video.Image; _video.Image = new Bitmap(source); old?.Dispose();
+        _displayedFrame = frame.Sequence;
+        _videoStatus.Text = $"카메라 {_cameraIndex.Value} 연결됨 · {frame.ReceivedUtc.ToLocalTime():HH:mm:ss} · 프레임 {frame.Sequence}";
+    }
+
+    private void CheckYoloModel()
+    {
+        try
+        {
+            EnsureYoloInspector();
+            var displayClasses = _yoloInspector!.ClassNames
+                .Where(name => name is not YoloOnnxInspector.TargetIphone and not YoloOnnxInspector.OtherPhone and not YoloOnnxInspector.Crack)
+                .Select(YoloOnnxInspector.DisplayClassName).Distinct();
+            _inspectionState.Text = $"YOLO 모델 준비 완료 · 신뢰도 {PhoneConfidenceThreshold:P0} · {_yoloInspector.CapabilityDescription} · 표시 클래스: {string.Join(", ", displayClasses)}";
+        }
+        catch (Exception ex)
+        {
+            _inspectionState.Text = "YOLO 모델 준비 실패: " + ex.Message;
+        }
+    }
+
+    private void SelectYoloModel()
+    {
+        if (_runningInspection || _inspectionBusy || _arduinoSetupBusy)
+        { _inspectionState.Text = "검사를 중지한 후 모델을 선택하세요."; return; }
+        using var dialog = new OpenFileDialog
+        {
+            Title = "검사에 사용할 YOLO ONNX 모델 선택",
+            Filter = "YOLO ONNX 모델 (*.onnx)|*.onnx",
+            InitialDirectory = Path.Combine(AppContext.BaseDirectory, "Models")
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+        try { LoadYoloModel(dialog.FileName); CheckYoloModel(); }
+        catch (Exception ex) { _inspectionState.Text = "모델 선택 실패 · 기존 모델 유지: " + ex.Message; }
+    }
+
+    private void LoadYoloModel(string modelPath)
+    {
+        if (_runningInspection || _inspectionBusy || _arduinoSetupBusy)
+            throw new InvalidOperationException("검사를 중지한 후 모델을 변경하세요.");
+        var next = new YoloOnnxInspector(modelPath, PhoneConfidenceThreshold);
+        var old = _yoloInspector;
+        _yoloInspector = next;
+        _selectedYoloModelPath = next.ModelPath;
+        old?.Dispose();
+        _productPresent = false;
+        _lastProductSeenUtc = default;
+        _inspectedFrame = 0;
+        ResetRecognizedResult();
+    }
+
+    private void LoadAllYoloModels()
+    {
+        if (_runningInspection || _inspectionBusy || _arduinoSetupBusy)
+        { _inspectionState.Text = "검사를 중지한 후 전체 학습 사용을 선택하세요."; return; }
+        try
+        {
+            var next = YoloOnnxInspector.CreateCombined(PhoneConfidenceThreshold);
+            var previous = _yoloInspector;
+            _yoloInspector = next;
+            _selectedYoloModelPath = null;
+            previous?.Dispose();
+            _productPresent = false;
+            _lastProductSeenUtc = default;
+            _inspectedFrame = 0;
+            ResetRecognizedResult();
+            CheckYoloModel();
+        }
+        catch (Exception ex) { _inspectionState.Text = "전체 학습 준비 실패 · 기존 모델 유지: " + ex.Message; }
+    }
+
+    private async Task StartInspectionAsync()
+    {
+        if (_runningInspection || _inspectionBusy || _arduinoSetupBusy) return;
+        if (_camera?.Latest == null)
+        { _inspectionState.Text = "먼저 카메라를 연결하세요."; return; }
+        if (_lines.SelectedItem is not LineStatusDto { IsReal: true })
+        { _inspectionState.Text = "실제 검사 가능한 라인을 선택하세요."; return; }
+        try { EnsureYoloInspector(); }
+        catch (Exception ex) { _inspectionState.Text = "YOLO 모델 준비 실패: " + ex.Message; return; }
+        _runningInspection = true; _inspectionStart.Enabled = false;
+        if (_recognizedVideo.Image == null)
+            _result.Text = "인식 대기 중 · 휴대폰이 인식되면 결과가 표시됩니다.";
+        _productPresent = false; _lastProductSeenUtc = default;
+        _inspectionGeneration++;
+        _inspectionState.Text = "YOLO 연속 검사 중 · 목표 간격 0.1초 · 제품별 기록은 한 번 저장";
+        _inspectionTimer.Start();
+        await InspectCameraAsync();
+    }
+
+    private void StopInspection(string message)
+    {
+        _runningInspection = false; _inspectionGeneration++;
+        _inspectionTimer.Stop(); _inspectionStart.Enabled = !_inspectionBusy;
+        _inspectionState.Text = message;
+    }
+
+    private async Task InspectCameraAsync()
+    {
+        if (!_runningInspection || _inspectionBusy) return;
+        var frame = _camera?.Latest;
+        if (frame == null || (DateTime.UtcNow - frame.ReceivedUtc).TotalSeconds > 3)
+        { StopInspection("영상이 없어 검사를 중지했습니다. 카메라 연결을 확인하세요."); return; }
+        if (frame.Sequence == _inspectedFrame) return;
+        _inspectedFrame = frame.Sequence;
+        var line = _lineId;
+        var generation = _inspectionGeneration;
+        string? recognizedResult = null;
+        _inspectionBusy = true;
+        try
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var analysis = await Task.Run(() => _yoloInspector!.Inspect(frame.Jpeg));
+            if (IsDisposed || !_runningInspection || generation != _inspectionGeneration) return;
+            stopwatch.Stop();
+
+            // 실시간 영상은 계속 갱신하지만 제품 결과는 새 휴대폰을 인식했을 때만 갱신합니다.
+            ShowYoloResultImage(analysis.ResultImage);
+            _displayedFrame = frame.Sequence;
+            var confidence = analysis.Detections.Select(value => value.Confidence).DefaultIfEmpty(0).Max();
+            var detectionResult = analysis.ObjectFound && !_yoloInspector!.CanClassifyProducts ? "휴대폰 검출 완료 · 품질 판정 미지원" : ResultText(analysis.Result);
+            _videoStatus.Text = $"카메라 {_cameraIndex.Value} · YOLO 처리 {stopwatch.ElapsedMilliseconds}ms · 목표 간격 {InspectionIntervalMs}ms · 프레임 {frame.Sequence}";
+            if (IsDisposed || !_runningInspection || generation != _inspectionGeneration) return;
+            if (!analysis.Detections.Any(value => YoloOnnxInspector.IsPhoneClass(value.ClassName)))
+            {
+                if (_lastProductSeenUtc == default || (DateTime.UtcNow - _lastProductSeenUtc).TotalMilliseconds >= 250)
+                { _productPresent = false; }
+                _inspectionState.Text = "YOLO 연속 검사 중 · 목표 간격 0.1초 · 휴대폰 감지 대기";
+                return;
+            }
+
+            _lastProductSeenUtc = DateTime.UtcNow;
+            _inspectionState.Text = "YOLO 연속 검사 중 · 목표 간격 0.1초 · 같은 제품은 중복 집계하지 않습니다.";
+            if (_productPresent) return;
+            var visiblePhones = analysis.Detections.Where(value =>
+                YoloOnnxInspector.IsPhoneClass(value.ClassName) &&
+                IsPhoneFullyInsideFrame(value.Box, _video.Image?.Size ?? Size.Empty)).ToArray();
+            if (visiblePhones.Length == 0)
+            {
+                _inspectionState.Text = "휴대폰 전체 진입 대기 · 화면 가장자리에서 잘린 제품은 아직 기록하지 않습니다.";
+                return;
+            }
+            _productPresent = true;
+
+            if (IsDisposed || !_runningInspection || generation != _inspectionGeneration) return;
+
+            using (var stream = new MemoryStream(analysis.ResultImage))
+            using (var source = Image.FromStream(stream))
+            {
+                var previous = _recognizedVideo.Image;
+                _recognizedVideo.Image = new Bitmap(source);
+                previous?.Dispose();
+            }
+            _recognizedProductNumber++;
+            var detectedModels = visiblePhones.Where(value => YoloOnnxInspector.IsPhoneModelClass(value.ClassName))
+                .Select(value => YoloOnnxInspector.DisplayClassName(value.ClassName)).Distinct().ToArray();
+            var modelText = detectedModels.Length > 0 ? string.Join(", ", detectedModels) : "기종 미확인";
+            var names = analysis.Result == InspectionResultType.Defect
+                ? $"crack_phone · {modelText}"
+                : modelText;
+            var mainPhone = visiblePhones.MaxBy(value => value.Confidence)!;
+            confidence = mainPhone.Confidence;
+            var sizeText = $"화면상 크기 {mainPhone.Box.Width:F0}×{mainPhone.Box.Height:F0}px";
+            _recognizedCaption.Text = $"마지막 인식 제품 · #{_recognizedProductNumber:0000}";
+            recognizedResult = $"인식 제품 #{_recognizedProductNumber:0000} · {names} · 최고 신뢰도 {confidence:P1}\r\n{detectionResult} · {sizeText} · 인식 {frame.ReceivedUtc.ToLocalTime():HH:mm:ss.fff}";
+            _result.Text = recognizedResult + "\r\n서버 기록 저장 중";
+            _result.ForeColor = analysis.Result == InspectionResultType.Defect ? UserTheme.Red : UserTheme.Text;
+
+            var saved = await _api.SaveCameraInspectionAsync(new CameraInspectionRequest(line, analysis.Result, analysis.Reason,
+                confidence, _yoloInspector!.CanClassifyProducts, CreateRecordImage(analysis.ResultImage)));
+            if (!saved.HasImage) throw new InvalidOperationException("인식 사진이 저장되지 않았습니다. 사진 저장 기능이 포함된 최신 서버로 다시 실행하세요.");
+            if (IsDisposed || generation != _inspectionGeneration) return;
+            _result.Text = recognizedResult + "\r\n기록 저장 완료 · 다음 제품을 인식할 때까지 이 결과를 유지합니다.";
+            _inspectionState.Text = $"YOLO 연속 검사 중 · 목표 간격 0.1초 · 제품 기록 저장 {DateTime.Now:HH:mm:ss}";
+            await RefreshAsync(false);
+        }
+        catch (Exception ex)
+        {
+            if (!IsDisposed)
+            {
+                if (recognizedResult != null)
+                    _result.Text = recognizedResult + "\r\n기록 처리 오류 · 저장 여부는 검사 이력에서 확인하세요.";
+                StopInspection("검사 중지 · 분석/저장 실패: " + ex.Message + " · 자동 재전송하지 않습니다.");
+
+            }
+        }
+        finally
+        {
+            _inspectionBusy = false;
+            if (!IsDisposed)
+            {
+                _inspectionStart.Enabled = !_runningInspection;
+                _conveyorRun.Enabled = _conveyor != null && !_conveyorCommandBusy;
+            }
+            else _yoloInspector?.Dispose();
+        }
+    }
+
+    private void EnsureYoloInspector()
+    {
+        _yoloInspector ??= _selectedYoloModelPath == null ? YoloOnnxInspector.CreateCombined(PhoneConfidenceThreshold)
+            : new YoloOnnxInspector(_selectedYoloModelPath, PhoneConfidenceThreshold);
+    }
+
+    internal static bool IsPhoneFullyInsideFrame(RectangleF box, Size imageSize)
+    {
+        if (imageSize.Width <= 0 || imageSize.Height <= 0 || box.Width <= 0 || box.Height <= 0)
+            return false;
+        var marginX = Math.Max(2f, imageSize.Width * 0.005f);
+        var marginY = Math.Max(2f, imageSize.Height * 0.005f);
+        return box.Left >= marginX && box.Top >= marginY &&
+               box.Right <= imageSize.Width - marginX && box.Bottom <= imageSize.Height - marginY;
+    }
+
+    private void ShowYoloResultImage(byte[] imageBytes)
+    {
+        if (imageBytes.Length == 0) return;
+        using var stream = new MemoryStream(imageBytes);
+        using var source = Image.FromStream(stream);
+        var old = _video.Image;
+        _video.Image = new Bitmap(source);
+        old?.Dispose();
+    }
+}

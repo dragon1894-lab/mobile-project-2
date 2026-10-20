@@ -1,0 +1,9 @@
+{
+  "classes": ["target_iphone", "other_phone", "crack", "iphone_14_white"],
+  "classificationAvailable": false,
+  "sha256": "2b7c63f6f6778f460639b9dd6b15d80c231a26fbe659bd16d132391a726d6de1",
+  "source": "iphone_14_white (1).zip",
+  "sourceDatasetIncluded": true,
+  "datasetImages": 50,
+  "importedAt": "2026-10-20"
+}

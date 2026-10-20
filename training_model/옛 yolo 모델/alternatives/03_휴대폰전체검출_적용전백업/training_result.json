@@ -1,0 +1,25 @@
+{
+  "model": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\training\\full_phone_20261019\\models\\runs\\full_phone\\weights\\last.pt",
+  "data": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\training\\full_phone_detector_20261019\\dataset\\data.yaml",
+  "epochs": 80,
+  "imgsz": 640,
+  "device": "cpu",
+  "run": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\training\\full_phone_detector_20261019\\models\\runs\\full_phone",
+  "best_pt": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\training\\full_phone_detector_20261019\\models\\best.pt",
+  "best_onnx": "C:\\Users\\moble\\OneDrive\\문서\\ChatGPT\\2차 프로젝트 생산라인\\training\\full_phone_detector_20261019\\models\\best.onnx",
+  "augmentation": {
+    "scale": 0.5,
+    "multi_scale": 0.1,
+    "translate": 0.15,
+    "degrees": 20,
+    "hsv_h": 0.01,
+    "hsv_s": 0.35,
+    "hsv_v": 0.35,
+    "mosaic": 0.5,
+    "close_mosaic": 20
+  },
+  "independent_test_available": false,
+  "mergedDatasetRequiresRetraining": false,
+  "color_classification_trained": false,
+  "physical_size_calibrated": false
+}

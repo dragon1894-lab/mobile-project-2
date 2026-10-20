@@ -1,0 +1,16 @@
+{
+  "classes": ["target_iphone", "other_phone", "crack", "crack_phone"],
+  "classificationAvailable": true,
+  "inputShape": [1, 3, 448, 448],
+  "outputShape": [1, 8, 4116],
+  "sha256": "ffb43c9b651d6d50885802afa3c33500d693be16cb48c4be5fcb07fb276a7dba",
+  "confidenceThreshold": 0.45,
+  "annotationTarget": "imported_phone_and_damage_classes",
+  "source": "카카오톡 받은 파일/best.onnx",
+  "colorClassificationAvailable": false,
+  "physicalSizeCalibrated": false,
+  "iphoneModelClassificationAvailable": false,
+  "targetIphoneIsNormal": true,
+  "allPhoneDetectionsAreDefect": false,
+  "note": "사용자 제공 모델. crack_phone은 휴대폰 검출과 파손 판정에 모두 사용합니다. 6개 아이폰 기종 및 4개 색상 분류는 포함하지 않습니다."
+}

@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\00_Shared\ProductionLine.Shared\ProductionLine.Shared.csproj" />
+    <ProjectReference Include="..\..\04_Vision\ProductionLine.Vision\ProductionLine.Vision.csproj" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\tools\arduino-cli\**\*"
+          Link="Tools\arduino-cli\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="Always"
+          CopyToPublishDirectory="Always" />
+    <None Include="..\..\hardware\ConveyorYoloControl\ConveyorYoloControl.ino"
+          Link="Hardware\ConveyorYoloControl\ConveyorYoloControl.ino"
+          CopyToOutputDirectory="Always"
+          CopyToPublishDirectory="Always" />
+    <None Include="..\..\04_Vision\models\**\*.onnx"
+          Link="Models\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="Always"
+          CopyToPublishDirectory="Always" />
+    <None Include="..\..\04_Vision\models\**\model_info.json"
+          Link="Models\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="Always"
+          CopyToPublishDirectory="Always" />
+    <None Include="..\..\04_Vision\models\background\empty_belt_reference.jpg"
+          Link="Models\background\empty_belt_reference.jpg"
+          CopyToOutputDirectory="Always"
+          CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
