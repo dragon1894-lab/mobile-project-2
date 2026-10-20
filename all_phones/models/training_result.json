@@ -1,0 +1,9 @@
+{
+  "model": "yolo26n.pt",
+  "data": "C:\\Users\\moble\\Desktop\\all_phones\\dataset\\data.yaml",
+  "epochs": 300,
+  "imgsz": 640,
+  "device": "0",
+  "best_pt": "C:\\Users\\moble\\Desktop\\all_phones\\models\\best.pt",
+  "best_onnx": "C:\\Users\\moble\\Desktop\\all_phones\\models\\best.onnx"
+}
