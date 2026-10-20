@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,6 +26,7 @@ namespace _01_AdminApp
         private readonly Button _save = new Button();
         private readonly Button _deactivate = new Button();
         private UserDto? _selected;
+        private List<UserDto> _allUsers = new List<UserDto>();  // 검색과 상관없는 전체 사용자 (아이디 중복 확인용)
         private bool _busy;
         private bool _binding;
 
@@ -161,10 +163,11 @@ namespace _01_AdminApp
             ResetEditor();
         }
 
-        private async Task ReloadAsync()
+        private async Task ReloadAsync(bool resetEditor = true)
         {
             var users = await _users.GetUsersAsync();
             if (IsDisposed) return;
+            _allUsers = users;
             string query = _search.Text.Trim();
             var filtered = users.Where(x =>
                 x.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
@@ -177,7 +180,7 @@ namespace _01_AdminApp
                 _grid.CurrentCell = null;
             }
             finally { _binding = false; }
-            ResetEditor();
+            if (resetEditor) ResetEditor();
         }
 
         private void ResetEditor()
@@ -232,6 +235,7 @@ namespace _01_AdminApp
             string password = _password.Text;
             bool active = _active.Checked;
             int[] lines = _allowed.CheckedItems.Cast<LineStatusDto>().Select(x => x.Id).ToArray();
+            if (selected == null && !CheckNewUserId(id)) return;
             await RunAsync(async () =>
             {
                 if (selected == null)
@@ -249,7 +253,24 @@ namespace _01_AdminApp
                     _search.Clear();
                     await ReloadAsync();
                 }
-            }, "저장 후 목록 갱신을 완료했습니다.");
+            }, "저장 후 목록 갱신을 완료했습니다.", keepEditorOnError: selected == null);
+        }
+
+        // 신규 사용자 ID를 서버에 보내기 전에 규칙과 중복을 먼저 확인해 팝업으로 알림 (김하균 추가)
+        // 규칙은 서버(AppStore.IsValidUserId)와 같음. 목록이 오래됐으면 서버가 409로 한 번 더 막음
+        private bool CheckNewUserId(string id)
+        {
+            string? problem = null;
+            if (id.Length is < 3 or > 20 || !id.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-'))
+                problem = "사용자 ID는 영어·숫자·_·-만 사용해 3~20자로 입력하세요.\r\n(한글·전각 문자·띄어쓰기·특수문자는 사용할 수 없습니다.)";
+            else if (_allUsers.Any(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                problem = $"이미 사용 중인 사용자 ID입니다: {id}\r\n다른 아이디를 입력하세요. (대소문자만 다른 아이디도 같은 아이디로 봅니다.)";
+            if (problem == null) return true;
+            MessageBox.Show(this, problem, "사용자 추가", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            _status.Text = problem.Replace("\r\n", " ");
+            _id.Focus();
+            _id.SelectAll();
+            return false;
         }
 
         private async Task DeactivateAsync()
@@ -267,10 +288,11 @@ namespace _01_AdminApp
             }, "비활성화 후 목록 갱신을 완료했습니다.");
         }
 
-        private async Task RunAsync(Func<Task> action, string success)
+        private async Task RunAsync(Func<Task> action, string success, bool keepEditorOnError = false)
         {
             if (_busy) return;
             _busy = true;
+            bool failed = false;
             _toolbar.Enabled = _editor.Enabled = _grid.Enabled = false;
             _status.Text = "처리 중입니다...";
             try
@@ -280,16 +302,23 @@ namespace _01_AdminApp
             }
             catch (Exception ex)
             {
+                failed = true;
                 // Refresh stale users after a rejected update; preserve the original error.
-                try { if (!IsDisposed && !Disposing) await ReloadAsync(); } catch { }
-                if (!IsDisposed) _status.Text = "처리 또는 목록 갱신 실패: " + ex.Message;
+                // 신규 추가 실패(예: 서버 409 중복)는 입력칸을 비우지 않고 팝업으로 알림
+                try { if (!IsDisposed && !Disposing) await ReloadAsync(resetEditor: !keepEditorOnError); } catch { }
+                if (!IsDisposed)
+                {
+                    _status.Text = "처리 또는 목록 갱신 실패: " + ex.Message;
+                    if (keepEditorOnError)
+                        MessageBox.Show(this, ex.Message, "사용자 추가 실패", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
                 _busy = false;
                 if (!IsDisposed)
                 {
-                    _password.Clear();
+                    if (!(failed && keepEditorOnError)) _password.Clear();
                     _toolbar.Enabled = _editor.Enabled = _grid.Enabled = true;
                 }
             }
