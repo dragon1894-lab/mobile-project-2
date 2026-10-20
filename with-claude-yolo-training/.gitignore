@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+*.user
+# 학습 사진·라벨·모델은 GitHub에 올리지 않음 (바탕화면\crack_iphone 에 보관)
+*.pt
+*.onnx
+*.jpg
+*.jpeg
+*.png
+*.heic
+runs/
+dataset/
+helper_model/

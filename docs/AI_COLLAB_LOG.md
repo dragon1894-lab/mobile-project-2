@@ -406,3 +406,15 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
   6. `md파일/원본_노트북용_적용현황_2026-10-19.md`를 저장소에도 추가. 루트·`with-claude`·서버·관리자·작업자 README와 `docs/API.md`(단체 채팅 창구, 아이디 규칙) 최신화.
 - 현재 상태: 완료. 같은 문서를 김하균 PC의 노트북용 폴더와 원본 `md파일` 폴더에도 넣음(원본 코드·README는 그대로).
 - 다음 작업: 조원별 정리 문서로 각자에게 알리기, 조장 전달 압축 갱신.
+
+### 2026-10-20 / Claude / 깨진 아이폰 YOLO 학습 인수인계 폴더(with-claude-yolo-training) 추가
+
+- 종류: 문서, 도구 정리 (앱·서버 코드 변경 없음)
+- 내용과 근거(김하균님 결정): 사진이 있는 다른 PC에서 다른 Claude가 바로 학습할 수 있도록 저장소 맨 위에 `with-claude-yolo-training/`을 만들었다.
+  1. `README.md`: 정해진 것(대상 `아이폰 깨짐` 150~200장, 클래스 `target_iphone/other_phone/crack/crack_iphone`, 뒷면 전체 = `crack_iphone`·깨진 부위 = `crack`, 300 에포크, 결과 바탕화면\crack_iphone), 시작 전 확인, 학습 툴 동작, 단계별 명령, 주의(정상 폰 사진 없음, 앱은 `crack_iphone` 이름을 모름).
+  2. 조장 문성찬의 학습 툴 `06_TrainingTool`(C# WinForms + `train_yolo.py`)을 김하균 바탕화면 `학습` 폴더에서 그대로 복사. 다른 프로젝트 참조가 없어 혼자 빌드됨(경고 0, 오류 0, `train_yolo.py` 실행 폴더 복사 확인).
+  3. `fix_orientation.py`: 툴은 EXIF 회전을 무시하고(`Image.FromStream`) YOLO(OpenCV)는 적용하므로, 사진을 먼저 회전 적용·JPG·영어 이름으로 정리. HEIC는 `pillow-heif`로 변환.
+  4. `autolabel.py`: 사람이 20~30장 라벨 → 도우미 모델 → 나머지 자동 라벨(기존 라벨 보호, 클래스 번호 불일치 시 중단, 검토 목록 `autolabel_list.txt`).
+- 확인: 툴 빌드 통과. 두 Python 스크립트는 Python이 없는 PC에서 작성해 **실행 시험 안 함**(README에 표시).
+- 올리지 않은 것: 학습 폴더의 옛 서버·앱 코드, 모델 파일(약 150MB), 사진, 빌드 캐시.
+- 다음 작업: 다른 PC에서 학습 진행 후 이 README의 "결과" 칸과 이 기록 갱신.
