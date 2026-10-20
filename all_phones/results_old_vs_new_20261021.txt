@@ -1,0 +1,42 @@
+
+######## old (all_phones): C:\Users\moble\Desktop\mobile-project-2\all_phones\models\best.onnx
+=== A. 보류 테스트 78장 (두 모델 모두 학습 안 함, 옛 데이터 출처) ===
+  broken_phone_extra           정답 crack_iphone                     2/  2 = 100.0%  결과 {'crack_iphone': 2}
+  crack_phone_61               정답 crack_iphone                    16/ 16 = 100.0%  결과 {'crack_iphone': 16}
+  iphone_12_pro_max_crack_60   정답 crack_iphone                     8/  8 = 100.0%  결과 {'crack_iphone': 8}
+  iphone_12pro_silver_107      정답 iphone_12_pro_silver             1/ 33 =   3.0%  결과 {'iphone15pro_Natural_Titanium': 20, 'iphon16_white': 2, '검출없음': 7, 'crack_iphone': 3, 'iphone_12_pro_silver': 1}
+  iphone_14_white_50           정답 iphone_14_white                  0/ 12 =   0.0%  결과 {'iphone15pro_Natural_Titanium': 6, 'iphon16_white': 6}
+  iphone_16_white_72           정답 iphon16_white                    1/  7 =  14.3%  결과 {'iphon16_white': 1, 'iphone15pro_Natural_Titanium': 5, 'crack_iphone': 1}
+  전체 28/78 = 35.9%
+=== B. 실제 컨베이어 사진 8장 (모두 정상 폰) ===
+   WIN_20261017_10_57_11_Pro.jpg      정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.93), ('iphone15pro_', 0.89)]
+   WIN_20261017_10_57_11_Pro_2.jpg    정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.93), ('iphone15pro_', 0.89)]
+   WIN_20261017_11_08_19_Pro.jpg      정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.92), ('iphone15pro_', 0.51)]
+   WIN_20261017_11_08_25_Pro.jpg      정답 iphone15pro_Natural_Titanium   → crack_iphone                   [('iphone15pro_', 0.93), ('iphone15pro_', 0.88), ('crack_iphone', 0.62)]
+   WIN_20261017_11_08_36_Pro.jpg      정답 iphon16_white                  → crack_iphone                   [('iphon16_whit', 0.95), ('iphon16_whit', 0.87), ('crack_iphone', 0.59)]
+   WIN_20261017_11_08_42_Pro.jpg      정답 iphon16_white                  → crack_iphone                   [('iphon16_whit', 0.88), ('crack_iphone', 0.62), ('iphon16_whit', 0.57)]
+   WIN_20261017_11_15_18_Pro.jpg      정답 (정상, 기종 미기록)                   → 검출없음                           []
+   WIN_20261017_11_15_24_Pro.jpg      정답 (정상, 기종 미기록)                   → crack_iphone                   [('crack_iphone', 0.68), ('crack_iphone', 0.66)]
+  기종 맞음 3/6 | 정상인데 불량 판정 4/8
+=== C. 검은 화면 → crack_iphone
+
+######## new (all_phones_v2): C:\Users\moble\Desktop\all_phones_v2\models\best.onnx
+=== A. 보류 테스트 78장 (두 모델 모두 학습 안 함, 옛 데이터 출처) ===
+  broken_phone_extra           정답 crack_iphone                     2/  2 = 100.0%  결과 {'crack_iphone': 2}
+  crack_phone_61               정답 crack_iphone                    16/ 16 = 100.0%  결과 {'crack_iphone': 16}
+  iphone_12_pro_max_crack_60   정답 crack_iphone                     8/  8 = 100.0%  결과 {'crack_iphone': 8}
+  iphone_12pro_silver_107      정답 iphone_12_pro_silver            33/ 33 = 100.0%  결과 {'iphone_12_pro_silver': 33}
+  iphone_14_white_50           정답 iphone_14_white                 12/ 12 = 100.0%  결과 {'iphone_14_white': 12}
+  iphone_16_white_72           정답 iphon16_white                    7/  7 = 100.0%  결과 {'iphon16_white': 7}
+  전체 78/78 = 100.0%
+=== B. 실제 컨베이어 사진 8장 (모두 정상 폰) ===
+   WIN_20261017_10_57_11_Pro.jpg      정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.89), ('iphone15pro_', 0.87)]
+   WIN_20261017_10_57_11_Pro_2.jpg    정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.89), ('iphone15pro_', 0.87)]
+   WIN_20261017_11_08_19_Pro.jpg      정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.91), ('iphone15pro_', 0.84)]
+   WIN_20261017_11_08_25_Pro.jpg      정답 iphone15pro_Natural_Titanium   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.9), ('iphone15pro_', 0.86)]
+   WIN_20261017_11_08_36_Pro.jpg      정답 iphon16_white                  → iphone15pro_Natural_Titanium   [('iphon16_whit', 0.79), ('iphone15pro_', 0.71)]
+   WIN_20261017_11_08_42_Pro.jpg      정답 iphon16_white                  → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.83), ('iphone15pro_', 0.45)]
+   WIN_20261017_11_15_18_Pro.jpg      정답 (정상, 기종 미기록)                   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.9), ('iphone15pro_', 0.77)]
+   WIN_20261017_11_15_24_Pro.jpg      정답 (정상, 기종 미기록)                   → iphone15pro_Natural_Titanium   [('iphone15pro_', 0.76)]
+  기종 맞음 4/6 | 정상인데 불량 판정 0/8
+=== C. 검은 화면 → 검출없음
