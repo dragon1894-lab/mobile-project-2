@@ -26,7 +26,7 @@
 1. `아이폰 깨짐` 사진 폴더가 **이 PC 어디에** 있는지 (보통 바탕화면).
 2. 사진 형식 — `.HEIC`가 섞여 있으면 JPG로 바꿔야 합니다(3단계 스크립트가 처리, `pillow-heif` 설치 필요).
 3. 이 PC에 **NVIDIA 그래픽카드**가 있는지 (있으면 GPU 학습으로 훨씬 빠름. 없으면 CPU로 2~4시간 이상).
-4. Python·.NET 설치 허락 (1단계).
+4. 설치 허락 — 이 PC에는 개발 도구가 하나도 없음(Visual Studio도 없음). 1단계 표의 Git, GitHub CLI(로그인은 사용자가 직접), .NET 8 SDK, Python 3.13, YOLO 패키지를 설치해야 함.
 
 ## 3. 이 폴더 구성
 ```
@@ -55,17 +55,33 @@ with-claude-yolo-training/
 - **학습 데이터 만들기:** 라벨 파일이 있는 사진만 모아 `dataset\`을 **지우고 새로** 만듦(검증 20%, 파일 이름 해시로 고정 분할) + `dataset\data.yaml`. 라벨 없는 사진은 빠짐.
 - **YOLO 학습 + ONNX 변환:** `train_yolo.py --data dataset\data.yaml --model <기본 모델> --epochs <학습 횟수> --imgsz <이미지 크기> --output models\ [--device]` 실행. 결과 `models\best.pt`, `models\best.onnx`, `models\training_result.json`, 그래프는 `models\runs\iphone_detector\`.
 - **주의 — 사진 회전:** 툴은 사진의 EXIF 회전 정보를 **무시**하고 보여 주지만(`Image.FromStream`), YOLO(OpenCV)는 **적용**해서 읽습니다. 세로 사진이면 박스가 어긋나므로 **3단계 `fix_orientation.py`로 먼저 정리**합니다.
-- Python 경로: 툴이 `%LOCALAPPDATA%\Programs\Python\Python313\python.exe` 등을 자동으로 찾음. 못 찾으면 화면의 "Python 실행 파일" 칸에 경로를 넣음. `WindowsApps\python.exe`(스토어 바로가기)는 실제 Python이 아님.
+- Python 경로: 툴은 `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`, `Python314` 등 정해진 위치만 자동으로 찾음(**3.12 위치는 목록에 없음** → 그래서 3.13 설치를 권장). 못 찾으면 화면의 "Python 실행 파일" 칸에 실제 경로를 넣음. `WindowsApps\python.exe`(스토어 바로가기)는 실제 Python이 아님.
 
 ## 5. 진행 순서
 아래 경로 예시의 `$desk`는 바탕화면입니다: PowerShell `$desk = [Environment]::GetFolderPath('Desktop')` (OneDrive면 `...\OneDrive\바탕 화면`).
 
-### 1단계. 환경 준비 (설치 전 허락)
-- .NET 8 SDK: `dotnet --version` (없으면 설치 허락 받기)
-- Python 3.12 또는 3.13 (python.org 설치본). 확인: `py -3 --version` 또는 설치 경로의 `python.exe --version`
-- `python -m pip install --upgrade ultralytics onnx pillow-heif` — PyTorch 포함 수 GB 다운로드
-  - NVIDIA GPU가 있으면 pytorch.org 안내대로 CUDA용 torch를 먼저 설치
-  - 확인: `python -c "import torch, ultralytics; print(torch.__version__, ultralytics.__version__, torch.cuda.is_available())"`
+### 1단계. 환경 준비 — 이 PC에는 아무것도 설치돼 있지 않음 (설치마다 허락)
+사용자 말: 학습할 PC에는 **Visual Studio 2022를 포함해 개발 도구가 하나도 없음.** 아래를 순서대로 확인하고, 없는 것만 허락을 받아 설치합니다.
+
+**Visual Studio 2022는 필요 없습니다.** Visual Studio는 코드 편집 프로그램일 뿐이고, 학습 툴(C#)은 **.NET 8 SDK**만 있으면 `dotnet build`로 빌드되고 `.exe`로 실행됩니다(10-20 김하균 노트북에서 Visual Studio 없이 빌드 확인). 사용자가 원하면 깔아도 되지만 학습에는 불필요합니다.
+
+| # | 설치할 것 | 왜 필요한가 | 확인 명령 | 설치 명령 (winget) |
+|---|---|---|---|---|
+| 0 | Claude (데스크톱 앱 또는 Claude Code) | 이 작업을 하는 Claude 자체 | — | 사용자가 직접 |
+| 1 | **Git** | 저장소 받기. Windows용 Claude Code도 Git Bash가 필요 | `git --version` | `winget install --id Git.Git -e` |
+| 2 | **GitHub CLI + 로그인** | 저장소가 **비공개**라 로그인해야 받을 수 있음 | `gh auth status` | `winget install --id GitHub.cli -e` → `gh auth login` (**로그인은 사용자가 직접**, 계정 `dragon1894-lab`) |
+| 3 | **.NET 8 SDK** | 학습 툴(C#) 빌드·실행 | `dotnet --list-sdks` (8.x가 있어야 함) | `winget install --id Microsoft.DotNet.SDK.8 -e` |
+| 4 | **Python 3.13** | YOLO 학습(`train_yolo.py`). 툴이 3.13 설치 위치를 자동으로 찾음 | `py -3.13 --version` | `winget install --id Python.Python.3.13 -e` |
+| 5 | **YOLO 패키지** | Ultralytics(PyTorch 포함, 수 GB), ONNX 변환, HEIC 변환 | 아래 확인 명령 | `py -3.13 -m pip install --upgrade ultralytics onnx pillow-heif` |
+| 6 | (NVIDIA 그래픽카드가 있을 때만) 최신 드라이버 + CUDA용 PyTorch | GPU로 빠르게 학습 | `nvidia-smi` | pytorch.org 안내 명령으로 torch를 **5번보다 먼저** 설치 |
+
+- `winget`이 없으면 각 공식 사이트 설치 파일로 설치합니다. Python 설치 파일을 쓰면 **"Add python.exe to PATH"를 체크**하도록 사용자에게 안내합니다.
+- 설치 후 **새 터미널을 열어야** `git`, `dotnet`, `py` 명령이 잡힙니다.
+- `python`만 치면 `WindowsApps\python.exe`(스토어 바로가기)가 잡힐 수 있습니다. 아래 명령의 `python`은 **`py -3.13`**(또는 `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`)으로 바꿔 실행하세요.
+- 확인: `py -3.13 -c "import torch, ultralytics; print(torch.__version__, ultralytics.__version__, torch.cuda.is_available())"`
+- PyTorch가 Python 3.13용 설치 파일을 못 찾는 오류가 나면 Python 3.12로 바꾸고, 학습 툴의 "Python 실행 파일" 칸에 `...\Python312\python.exe` 경로를 직접 넣습니다.
+- 저장소 받기: `gh repo clone dragon1894-lab/mobile-project-2` → 받은 폴더(`mobile-project-2`) 안에서 아래 명령을 실행합니다. 이 폴더(`with-claude-yolo-training`)만 쓰고 `with-claude/`는 건드리지 않습니다.
+- 디스크: 최소 10GB 여유 권장 (PyTorch, 학습 결과).
 
 ### 2단계. 프로젝트 폴더 만들기
 ```powershell
