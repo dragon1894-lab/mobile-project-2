@@ -4,7 +4,7 @@ using ProductionLine.Shared;
 namespace ProductionLine.ConnectUI;
 
 // [서버 연결 창] 앱을 켜면 로그인 전에 먼저 뜨는 창 (김하균 추가, 2026-10-21)
-// - 관리자 앱: "서버 열기(이 PC에서 서버 켜기)" / "서버 접속" 중 선택
+// - 관리자 앱: "서버 열기"만 (이 PC에서 서버를 켜고 접속. 이미 켜져 있으면 그 서버에 접속)
 // - 작업자 앱: "서버 접속"만 (같은 네트워크의 서버를 자동으로 찾거나 IP 직접 입력)
 // 두 앱 csproj에 링크로 들어감 (00_Shared/ProductionLine.ConnectUI)
 public sealed class ServerConnectForm : Form
@@ -13,8 +13,6 @@ public sealed class ServerConnectForm : Form
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ProductionLine", "last-server.txt");
 
     private readonly bool _allowStart;
-    private readonly RadioButton _openMode = new() { Text = "서버 열기  (이 PC에서 서버 켜기)", AutoSize = true, Font = new Font("맑은 고딕", 10.5f, FontStyle.Bold) };
-    private readonly RadioButton _connectMode = new() { Text = "서버 접속  (다른 PC에서 켠 서버에 연결)", AutoSize = true, Checked = true, Font = new Font("맑은 고딕", 10.5f, FontStyle.Bold) };
     private readonly Label _thisPc = new() { AutoSize = false, Dock = DockStyle.Fill, ForeColor = Color.FromArgb(0, 105, 92), TextAlign = ContentAlignment.MiddleLeft };
     private readonly Button _openButton = new() { Text = "서버 켜고 접속", Dock = DockStyle.Fill };
     private readonly ListBox _servers = new() { Dock = DockStyle.Fill, IntegralHeight = false, Font = new Font("맑은 고딕", 10.5f) };
@@ -42,7 +40,7 @@ public sealed class ServerConnectForm : Form
         MinimizeBox = false;
         Font = new Font("맑은 고딕", 10);
         BackColor = Color.White;
-        ClientSize = new Size(600, allowStartServer ? 560 : 450);
+        ClientSize = new Size(600, allowStartServer ? 340 : 450);
         Padding = new Padding(22, 18, 22, 16);
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1 };
@@ -52,34 +50,51 @@ public sealed class ServerConnectForm : Form
             layout.Controls.Add(control, 0, layout.RowStyles.Count - 1);
         }
 
-        Row(new Label { Text = "서버 연결", AutoSize = true, Font = new Font("맑은 고딕", 16, FontStyle.Bold), Margin = new Padding(0, 0, 0, 4) }, SizeType.AutoSize, 0);
+        Row(new Label { Text = allowStartServer ? "서버 열기" : "서버 연결", AutoSize = true, Font = new Font("맑은 고딕", 16, FontStyle.Bold), Margin = new Padding(0, 0, 0, 4) }, SizeType.AutoSize, 0);
         Row(new Label
         {
             Text = allowStartServer
-                ? "이 PC에서 서버를 켜거나, 다른 PC에서 켠 서버에 접속하세요."
+                ? "이 PC에서 서버를 켜고 관리자로 접속합니다. 작업자 PC는 아래 주소로 접속하세요."
                 : "같은 네트워크(공유기)에서 켜진 서버를 찾아 접속합니다.",
             AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(0, 0, 0, 12)
         }, SizeType.AutoSize, 0);
 
+        // 관리자 앱: "서버 열기"만 (10-21 김하균 결정 — 관리자는 다른 서버에 접속할 일이 없음)
         if (allowStartServer)
         {
-            var open = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = new Padding(0, 0, 0, 10) };
-            open.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            open.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
-            open.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
-            open.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
-            open.Controls.Add(_openMode, 0, 0); open.SetColumnSpan(_openMode, 2);
-            open.Controls.Add(_thisPc, 0, 1);
-            open.Controls.Add(_openButton, 1, 1);
-            Row(open, SizeType.Absolute, 82);
-            Row(_connectMode, SizeType.Absolute, 32);
-        }
-        else
-        {
-            Row(new Label { Text = "찾은 서버", AutoSize = true, Font = new Font("맑은 고딕", 10.5f, FontStyle.Bold) }, SizeType.AutoSize, 0);
+            _thisPc.Font = new Font("맑은 고딕", 13, FontStyle.Bold);
+            _thisPc.TextAlign = ContentAlignment.MiddleCenter;
+            _thisPc.BackColor = Color.FromArgb(235, 246, 244);
+            _thisPc.Margin = new Padding(0, 0, 0, 10);
+            Row(_thisPc, SizeType.Absolute, 70);
+            _openButton.Font = new Font("맑은 고딕", 12, FontStyle.Bold);
+            _openButton.Margin = new Padding(0, 0, 0, 6);
+            Row(_openButton, SizeType.Absolute, 54);
+            Row(_status, SizeType.Percent, 100);
+            var closeRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
+            closeRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            closeRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
+            closeRow.Controls.Add(_close, 1, 0);
+            Row(closeRow, SizeType.Absolute, 40);
+            Controls.Add(layout);
+            StyleButtons();
+            _openButton.Click += async (_, _) => await OpenServerAsync();
+            _close.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
+            Shown += (_, _) =>
+            {
+                var best = LocalNetwork.GetBestLanIPv4();
+                _thisPc.Text = best == null
+                    ? "이 PC 네트워크 주소 없음 (이 PC에서만 접속 가능)"
+                    : $"이 PC 주소   {best}:{ServerDiscovery.DefaultHttpPort}";
+                UpdateModes();
+                Status("[서버 켜고 접속]을 누르면 이 PC에서 서버가 켜지고 관리자 로그인 창이 열려요.\r\n이미 서버가 켜져 있으면 그 서버에 바로 접속해요.");
+            };
+            return;
         }
 
-        var found = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = new Padding(allowStartServer ? 22 : 0, 4, 0, 6) };
+        Row(new Label { Text = "찾은 서버", AutoSize = true, Font = new Font("맑은 고딕", 10.5f, FontStyle.Bold) }, SizeType.AutoSize, 0);
+
+        var found = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = new Padding(0, 4, 0, 6) };
         found.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         found.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
         found.RowCount = 3;
@@ -91,7 +106,7 @@ public sealed class ServerConnectForm : Form
         found.Controls.Add(_refresh, 1, 1);
         Row(found, SizeType.Percent, 100);
 
-        var manual = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = new Padding(allowStartServer ? 22 : 0, 0, 0, 6) };
+        var manual = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = new Padding(0, 0, 0, 6) };
         manual.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
         manual.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         manual.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
@@ -108,25 +123,9 @@ public sealed class ServerConnectForm : Form
         bottom.Controls.Add(_close, 1, 0);
         Row(bottom, SizeType.Absolute, 40);
         Controls.Add(layout);
+        StyleButtons();
 
-        foreach (var button in new[] { _openButton, _connectSelected, _connectManual })
-        {
-            button.BackColor = Color.FromArgb(0, 119, 117);
-            button.ForeColor = Color.White;
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = 0;
-            button.Font = new Font("맑은 고딕", 10, FontStyle.Bold);
-        }
-
-        // 두 선택 버튼이 서로 다른 칸에 있어서 자동으로 하나만 선택되지 않으므로 직접 맞춤
-        _openMode.CheckedChanged += (_, _) => { if (_openMode.Checked) _connectMode.Checked = false; UpdateModes(); };
-        _connectMode.CheckedChanged += (_, _) =>
-        {
-            if (_connectMode.Checked) _openMode.Checked = false;
-            UpdateModes();
-            if (_connectMode.Checked && _servers.Items.Count == 0) _ = SearchAsync();
-        };
-        _openButton.Click += async (_, _) => await OpenServerAsync();
+        // 작업자 앱: 서버 찾기 목록 + 직접 입력
         _refresh.Click += async (_, _) => await SearchAsync();
         _connectSelected.Click += async (_, _) => await ConnectSelectedAsync();
         _servers.DoubleClick += async (_, _) => await ConnectSelectedAsync();
@@ -136,19 +135,27 @@ public sealed class ServerConnectForm : Form
         FormClosing += (_, _) => _search?.Cancel();
         Shown += async (_, _) =>
         {
-            var best = LocalNetwork.GetBestLanIPv4();
-            _thisPc.Text = best == null
-                ? "이 PC 네트워크 주소 없음 (이 PC에서만 접속 가능)"
-                : $"이 PC 주소: {best}:{ServerDiscovery.DefaultHttpPort}  → 작업자 PC는 이 주소로 접속";
             _manual.Text = LoadLastServer();
             UpdateModes();
             await SearchAsync();
         };
     }
 
+    private void StyleButtons()
+    {
+        foreach (var button in new[] { _openButton, _connectSelected, _connectManual })
+        {
+            button.BackColor = Color.FromArgb(0, 119, 117);
+            button.ForeColor = Color.White;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            if (button != _openButton) button.Font = new Font("맑은 고딕", 10, FontStyle.Bold);
+        }
+    }
+
     private void UpdateModes()
     {
-        var open = _allowStart && _openMode.Checked;
+        var open = _allowStart; // 관리자 앱 = 서버 열기 전용, 작업자 앱 = 서버 접속 전용
         _thisPc.Enabled = _openButton.Enabled = open && !_busy;
         foreach (var control in new Control[] { _servers, _refresh, _connectSelected, _manual, _connectManual })
             control.Enabled = !open && !_busy;
