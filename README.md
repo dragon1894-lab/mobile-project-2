@@ -8,7 +8,7 @@
 |---|---|---|
 | [`with-claude/`](with-claude/README.md) | **최신 통합 코드** (5명 코드 + 서버·DB, 2026-10-20, 김하균 PC의 노트북용 폴더와 같음) | 모두 |
 | [`with-claude-yolo-training/`](with-claude-yolo-training/README.md) | **깨진 아이폰(crack_iphone) YOLO 학습** 인수인계 + 조장 학습 툴 코드 (2026-10-20) | 학습을 맡은 Claude, 김하균 |
-| [`all_phones/`](all_phones/README.md) | **아이폰 5종 통합 YOLO 모델 v2**(불량 + 기종 4개) 사진·라벨·모델(`models/best.onnx`), 인식률, 컨베이어 PC에서 할 일 (2026-10-21) | 컨베이어 검출 담당 Claude, 조장, 김하균 |
+| [`all_phones/`](all_phones/README.md) | **아이폰 5종 통합 YOLO 모델 v3**(불량 + 기종 4개, 우드락 컨베이어 사진 추가) 사진·라벨·모델(`models/best.onnx`), 인식률, 컨베이어 PC에서 할 일 (2026-10-21) | 컨베이어 검출 담당 Claude, 조장, 김하균 |
 | [`with-claude/md파일/`](with-claude/md파일) | 김하균 서버·DB 정리, 앞으로 할 일, **조원별 정리** | 김하균, 조원 |
 | [`docs/AI_COLLAB_LOG.md`](docs/AI_COLLAB_LOG.md) | 날짜별 작업 기록 (무엇을 했고, 어떻게 확인했고, 다음은 무엇인지) | 김하균, Claude, Codex |
 | [`docs/PROJECT_HANDOFF.md`](docs/PROJECT_HANDOFF.md) | 프로젝트 인수인계 (방향, 담당, 연결 지점) | 작업을 이어받는 사람·AI |

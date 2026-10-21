@@ -1,0 +1,30 @@
+
+######## C:\Users\moble\Desktop\이전 학습폴더들\mobile-project-2\training_model\v2\v2.onnx
+=== 1. 컨베이어 시험 사진 (test_conveyor) ===
+  crack_iphone                     0/ 20 =   0.0%  평균 최고 신뢰도 -  결과 {'검출없음': 20}
+  empty_belt                       6/  6 = 100.0%  평균 최고 신뢰도 -  결과 {'검출없음': 6}
+  iphon16_white                    7/ 20 =  35.0%  평균 최고 신뢰도 0.81  결과 {'iphone_12_pro_silver': 13, 'iphon16_white': 7}
+  iphone15pro_Natural_Titanium     0/ 10 =   0.0%  평균 최고 신뢰도 0.84  결과 {'iphone_12_pro_silver': 10}
+  iphone_12_pro_silver             8/  8 = 100.0%  평균 최고 신뢰도 0.71  결과 {'iphone_12_pro_silver': 8}
+  iphone_14_white                  0/ 10 =   0.0%  평균 최고 신뢰도 0.89  결과 {'iphone_12_pro_silver': 10}
+  전체 21/74 = 28.4%
+=== 2. 예전 보류 시험: 78/78 = 100.0%
+=== 3. 예전 컨베이어 8장: 기종 4/6, 정상→불량 0/8
+=== 4. 검은 화면 -> 검출없음
+
+######## C:\Users\moble\Desktop\이전 학습폴더들\mobile-project-2\all_phones\models\best.onnx
+=== 1. 컨베이어 시험 사진 (test_conveyor) ===
+  crack_iphone                    20/ 20 = 100.0%  평균 최고 신뢰도 0.94  결과 {'crack_iphone': 20}
+  empty_belt                       6/  6 = 100.0%  평균 최고 신뢰도 -  결과 {'검출없음': 6}
+  iphon16_white                   20/ 20 = 100.0%  평균 최고 신뢰도 0.92  결과 {'iphon16_white': 20}
+  iphone15pro_Natural_Titanium    10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone15pro_Natural_Titanium': 10}
+  iphone_12_pro_silver             8/  8 = 100.0%  평균 최고 신뢰도 0.92  결과 {'iphone_12_pro_silver': 8}
+  iphone_14_white                 10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone_14_white': 10}
+  전체 74/74 = 100.0%
+=== 2. 예전 보류 시험: 77/78 = 98.7%
+=== 3. 예전 컨베이어 8장: 기종 6/6, 정상→불량 2/8
+=== 4. 검은 화면 -> 검출없음
+
+######## 요약
+  v2.onnx                      컨베이어 21/74  예전 78/78  예전 컨베이어 기종 4/6 불량오판 0  검은 화면 검출없음
+  best.onnx                    컨베이어 74/74  예전 77/78  예전 컨베이어 기종 6/6 불량오판 2  검은 화면 검출없음

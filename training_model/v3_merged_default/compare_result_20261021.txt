@@ -1,0 +1,59 @@
+
+######## v2
+=== 1. 새 컨베이어 시험 사진 ===
+  crack_iphone                     0/ 20 =   0.0%  평균 최고 신뢰도 -  결과 {'검출없음': 20}
+  empty_belt                       6/  6 = 100.0%  평균 최고 신뢰도 -  결과 {'검출없음': 6}
+  iphon16_white                    7/ 20 =  35.0%  평균 최고 신뢰도 0.81  결과 {'iphone_12_pro_silver': 13, 'iphon16_white': 7}
+  iphone15pro_Natural_Titanium     0/ 10 =   0.0%  평균 최고 신뢰도 0.84  결과 {'iphone_12_pro_silver': 10}
+  iphone_12_pro_silver             8/  8 = 100.0%  평균 최고 신뢰도 0.71  결과 {'iphone_12_pro_silver': 8}
+  iphone_14_white                  0/ 10 =   0.0%  평균 최고 신뢰도 0.89  결과 {'iphone_12_pro_silver': 10}
+  전체 21/74 = 28.4%
+=== 2. 예전 보류 시험 78장: 78/78 = 100.0%  crack_iphone:26/26 iphon16_white:7/7 iphone_12_pro_silver:33/33 iphone_14_white:12/12
+=== 3. 예전 컨베이어 8장: 기종 4/6, 정상→불량 0/8  ['iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr']
+=== 4. 검은 화면 -> 검출없음
+
+######## v3_merged_default
+=== 1. 새 컨베이어 시험 사진 ===
+  crack_iphone                    20/ 20 = 100.0%  평균 최고 신뢰도 0.94  결과 {'crack_iphone': 20}
+  empty_belt                       6/  6 = 100.0%  평균 최고 신뢰도 -  결과 {'검출없음': 6}
+  iphon16_white                   20/ 20 = 100.0%  평균 최고 신뢰도 0.92  결과 {'iphon16_white': 20}
+  iphone15pro_Natural_Titanium    10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone15pro_Natural_Titanium': 10}
+  iphone_12_pro_silver             8/  8 = 100.0%  평균 최고 신뢰도 0.92  결과 {'iphone_12_pro_silver': 8}
+  iphone_14_white                 10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone_14_white': 10}
+  전체 74/74 = 100.0%
+=== 2. 예전 보류 시험 78장: 77/78 = 98.7%  crack_iphone:26/26 iphon16_white:6/7 iphone_12_pro_silver:33/33 iphone_14_white:12/12
+=== 3. 예전 컨베이어 8장: 기종 6/6, 정상→불량 2/8  ['iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr', 'iphon16_wh', 'iphon16_wh', 'crack_ipho', 'crack_ipho']
+=== 4. 검은 화면 -> 검출없음
+
+######## v3_merged_conveyor
+=== 1. 새 컨베이어 시험 사진 ===
+  crack_iphone                    20/ 20 = 100.0%  평균 최고 신뢰도 0.94  결과 {'crack_iphone': 20}
+  empty_belt                       6/  6 = 100.0%  평균 최고 신뢰도 -  결과 {'검출없음': 6}
+  iphon16_white                   20/ 20 = 100.0%  평균 최고 신뢰도 0.92  결과 {'iphon16_white': 20}
+  iphone15pro_Natural_Titanium    10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone15pro_Natural_Titanium': 10}
+  iphone_12_pro_silver             8/  8 = 100.0%  평균 최고 신뢰도 0.93  결과 {'iphone_12_pro_silver': 8}
+  iphone_14_white                 10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone_14_white': 10}
+  전체 74/74 = 100.0%
+=== 2. 예전 보류 시험 78장: 77/78 = 98.7%  crack_iphone:26/26 iphon16_white:6/7 iphone_12_pro_silver:33/33 iphone_14_white:12/12
+=== 3. 예전 컨베이어 8장: 기종 5/6, 정상→불량 1/8  ['iphone15pr', 'iphone15pr', 'iphone15pr', 'iphone15pr', 'iphon16_wh', '검출없음', 'iphone15pr', 'crack_ipho']
+=== 4. 검은 화면 -> 검출없음
+
+######## v3_conveyor_only
+=== 1. 새 컨베이어 시험 사진 ===
+  crack_iphone                    20/ 20 = 100.0%  평균 최고 신뢰도 0.95  결과 {'crack_iphone': 20}
+  empty_belt                       6/  6 = 100.0%  평균 최고 신뢰도 -  결과 {'검출없음': 6}
+  iphon16_white                   20/ 20 = 100.0%  평균 최고 신뢰도 0.95  결과 {'iphon16_white': 20}
+  iphone15pro_Natural_Titanium    10/ 10 = 100.0%  평균 최고 신뢰도 0.96  결과 {'iphone15pro_Natural_Titanium': 10}
+  iphone_12_pro_silver             8/  8 = 100.0%  평균 최고 신뢰도 0.95  결과 {'iphone_12_pro_silver': 8}
+  iphone_14_white                 10/ 10 = 100.0%  평균 최고 신뢰도 0.94  결과 {'iphone_14_white': 10}
+  전체 74/74 = 100.0%
+=== 2. 예전 보류 시험 78장: 2/78 = 2.6%  crack_iphone:1/26 iphon16_white:0/7 iphone_12_pro_silver:0/33 iphone_14_white:1/12
+=== 3. 예전 컨베이어 8장: 기종 3/6, 정상→불량 0/8  ['iphone15pr', 'iphone15pr', 'iphone_12_', 'iphone15pr', 'iphone_12_', 'iphone_12_', 'iphone_14_', 'iphone_14_']
+=== 4. 검은 화면 -> 검출없음
+
+######## 요약
+model                  crack_iphone   empty_belt iphon16_whit iphone15pro_ iphone_12_pr iphone_14_wh  conv all   old78  conv8    black
+v2                         0/20         6/6          7/20         0/10         8/8          0/10       21/74    78/78   4/6       검출없음
+v3_merged_default         20/20         6/6         20/20        10/10         8/8         10/10       74/74    77/78   6/6       검출없음
+v3_merged_conveyor        20/20         6/6         20/20        10/10         8/8         10/10       74/74    77/78   5/6       검출없음
+v3_conveyor_only          20/20         6/6         20/20        10/10         8/8         10/10       74/74     2/78   3/6       검출없음
