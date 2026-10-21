@@ -1,24 +1,53 @@
-# all_phones — 아이폰 5종 통합 YOLO 모델 (인수인계, **v3** · 2026-10-21)
+# all_phones — 아이폰 5종 통합 YOLO 모델 (인수인계, **v4** · 2026-10-21)
 
 > **이 문서를 받은 사람·Claude에게:** 폰 5종(불량 1 + 기종 4)을 **하나의 모델**로 학습한 데이터와 결과입니다.
-> 이 폴더는 **v3 (`v3_merged_default`)** 입니다. v2는 컨베이어 PC에서 "컨베이어에 올리면 거의 15 Pro로 나옴" 문제가 있었고(`docs/AI_COLLAB_LOG.md` 10-21 컨베이어 PC 기록), 김하균님이 **우드락으로 덮은 컨베이어 환경**에서 사진을 찍어 라벨링해서 v2 데이터에 더해 다시 학습했습니다. **앱 모델을 v2 → v3로 교체하세요.**
-> 컨베이어 PC에서는 **"0. 컨베이어 PC에서 할 일"** 순서대로 진행하세요.
+> 이 폴더는 **v4 (`v4_merged_default`)** 입니다.
+> - v2 → v3: v2가 컨베이어 폰을 거의 15 Pro로 판정 → 김하균님이 **우드락으로 덮은 컨베이어 환경** 사진을 찍어 라벨링해서 추가.
+> - v3 → v4: v3를 컨베이어에 적용해 보니 **15 Pro를 12 Pro 실버로 착각** → 오후에 15 Pro 50장을 새로 찍어 라벨링해서 추가(아래 1번 표의 "새 15 Pro" 줄).
+> **앱 모델을 v4로 교체하세요.** 컨베이어 PC에서는 **"0. 컨베이어 PC에서 할 일"** 순서대로 진행하세요.
 >
 > 학습: 2026-10-21, Claude(학습 PC, RTX 4070 Ti SUPER, Python 3.13, Ultralytics 8.4.183).
 
 ## 0. 컨베이어 PC에서 할 일 (순서대로)
 
 1. `git pull` 로 최신 받기.
-2. **앱 모델을 v2 → v3로 교체.** `04_Vision/models/best.onnx` 를 `all_phones/models/best.onnx`(v3, = `training_model/v3_merged_default/v3_merged_default.onnx`)로 바꾸고, `model_info.json`의 `sha256`을 아래 값으로 고칩니다. 빌드 출력 폴더에 복사된 옛 `best.onnx`가 있으면 그것도 바꾸세요.
-   - v3 `best.onnx` SHA256: `ba0144a98da97dc9565f1deae905c429df6641265b38e9d68273da20de6c25c1`
-   - **클래스 이름·번호·입출력 모양이 v2와 완전히 같습니다**(아래 2번). 앱 코드와 판정 규칙(10-21에 컨베이어 PC가 고친 것)은 그대로 쓰면 됩니다.
-3. **실제 검사 확인:** 우드락 환경에서 폰을 기종마다 여러 번(가능하면 10번 이상) 올려 기종·불량 판정을 확인. 특히 **16 화이트, 14 화이트, 15 Pro**가 15 Pro로 쏠리지 않는지, **빈 벨트**에서 아무것도 안 잡히는지, **깨진 폰**이 불량으로 나오는지.
+2. **앱 모델을 v4로 교체하고, 앱 안의 v3(및 그 이전) 모델은 지워서 v4 하나로만 실행되게 합니다** (김하균님 요청).
+   1. `04_Vision/models/`에 있는 지금 모델(v3 `best.onnx`, SHA256 `ba0144a9…6c25c1`)을 **삭제**하고, 그 자리에 `all_phones/models/best.onnx`(v4)를 넣습니다. `classes.txt`는 같아서 그대로 둬도 됩니다.
+   2. `model_info.json`의 `sha256`을 v4 값으로 고칩니다: `55ac3efd6fc19d86a1c86b23b7218bd1314216df9d90eb17be19979cf7c87cfd`
+   3. **빌드 출력 폴더(bin/…, 앱 실행 폴더)마다 복사돼 있는 옛 `best.onnx`/`.onnx`도 지우거나 v4로 바꾸고**, 다시 빌드합니다. 앱 실행 폴더마다 **ONNX 파일이 v4 하나만** 있어야 합니다.
+   4. 확인: 컨베이어 PC 전체에서 `.onnx` 파일을 찾아 앱이 쓰는 곳에 v4 SHA256과 같은 파일만 있는지 봅니다(백업 폴더 `옛 yolo 모델` 등 앱이 읽지 않는 곳은 그대로 둬도 됨). 앱을 켰을 때 모델 로딩 로그·`model_info.json` 검사가 v4 값으로 통과하는지 확인합니다.
+   5. v3 파일이 다시 필요하면 저장소 `training_model/v3_merged_default/`에 있습니다(삭제해도 되돌릴 수 있음).
+   - **클래스 이름·번호·입출력 모양이 v2·v3와 완전히 같습니다**(아래 2번). 앱 코드와 판정 규칙(10-21에 컨베이어 PC가 고친 것)은 그대로 쓰면 됩니다.
+3. **실제 검사 확인:** 우드락 환경에서 폰을 기종마다 여러 번(가능하면 10번 이상) 올려 기종·불량 판정을 확인. 특히 **15 Pro ↔ 12 Pro 실버**가 서로 헷갈리지 않는지, 16·14 화이트가 맞게 나오는지, **빈 벨트**에서 아무것도 안 잡히는지, **깨진 폰**이 불량으로 나오는지.
 4. 틀린 장면이 있으면 그 화면을 캡처해 두고(기종 기록), 학습 PC로 보내 주세요.
 5. 결과를 `docs/AI_COLLAB_LOG.md`에 기록.
 
 ## 1. 인식률 비교 (C# 앱과 같은 방식)
 
-평가 방식: ONNX, 신뢰도 0.45, IoU 0.45, letterbox 114. 판정 = `crack_iphone` 박스가 하나라도 있으면 불량, 아니면 **가장 큰 박스**의 기종. 스크립트: `scripts/eval_v3.py`(아래 6번). 원본 출력: `results_v3_20261021.txt`, 후보 4개 비교 `../training_model/v3_merged_default/compare_result_20261021.txt`.
+평가 방식: ONNX, 신뢰도 0.45, IoU 0.45, letterbox 114. 판정 = `crack_iphone` 박스가 하나라도 있으면 불량, 아니면 **가장 큰 박스**의 기종. 스크립트: `scripts/eval_v3.py`(아래 6번).
+
+### v4 (지금) — v3 대비
+
+원본 출력: `results_v4_20261021.txt`(이 저장소에서 다시 실행), 후보 비교 `../training_model/v4_merged_default/compare_result_20261021.txt`.
+
+| 시험 사진 (모두 학습·검증에 안 쓴 사진) | v3_merged_default | **v4_merged_default (채택)** | v4_merged_conveyor |
+|---|---|---|---|
+| **새 15 Pro 15장** (오후 촬영, 학습한 50장 중 첫 촬영 묶음을 통째로 뺌) | **4/15** (11장을 12 Pro로) | **15/15** | 15/15 |
+| 오전 컨베이어 시험 74장 (깨진 폰 20, 16 화이트 20, 15 Pro 10, 12 Pro 실버 8, 14 화이트 10, 빈 벨트 6) | 74/74 | 74/74 | 74/74 |
+| **컨베이어 시험 전체 89장** (`test_conveyor/`) | 78/89 = 87.6% | **89/89 = 100%** | 89/89 |
+| 12 Pro 실버 8장 (15 Pro를 더 배운 뒤 반대로 쏠리지 않는지) | 8/8 | 8/8 | 8/8 |
+| 예전 보류 시험 78장 | 77/78 | 77/78 | 77/78 |
+| 우드락 전 컨베이어 8장: 기종 / 정상→불량 | 6/6 / 2 | 5/6 / 1 | 5/6 / 1 |
+| 검은 화면 | 검출없음 | 검출없음 | 검출없음 |
+| 평균 최고 신뢰도 (기종별) | 0.90~0.94 | 0.93~0.95 | 0.92~0.94 |
+| 검증 점수 P / R / mAP50-95 | 0.979 / 0.973 / 0.834 | 0.989 / 0.968 / 0.837 | 0.991 / 0.964 / 0.834 |
+
+- 두 v4 후보는 시험 결과가 같아, v3와 같은 설정(기본 증강)인 `v4_merged_default`를 채택. `v4_merged_conveyor`(색 흔들기 작게·좌우 뒤집기 끔)는 학습 PC 바탕화면에 예비로 둠.
+- 우드락 전 사진 8장 중 1장(16 화이트 `11_08_42`)을 v4는 12 Pro로 봅니다(v3는 맞힘). 우드락 환경 사진이 아니라 참고용입니다.
+
+### v3 (이전) — v2 대비
+
+원본 출력: `results_v3_20261021.txt`, 후보 4개 비교 `../training_model/v3_merged_default/compare_result_20261021.txt`. (이 표의 컨베이어 시험은 오전 74장 기준)
 
 v3 후보 3개를 함께 학습해 비교했고 **`v3_merged_default`를 골랐습니다.**
 
@@ -53,7 +82,7 @@ v3 후보 3개를 함께 학습해 비교했고 **`v3_merged_default`를 골랐�
 | 입력 | `images` | `[1, 3, 640, 640]` float32 | RGB, 0~1, NCHW |
 | 출력 | `output0` | `[1, 9, 8400]` | 후보 8400개 × (cx, cy, w, h + 클래스 점수 5). **NMS는 앱에서** |
 
-- 파일: `models/best.onnx`(앱용, 약 10MB), `models/best.pt`(다시 학습할 때 출발점). `training_model/v3_merged_default/`에 같은 파일이 `v3_merged_default.onnx/.pt` 이름으로 있습니다.
+- 파일: `models/best.onnx`(앱용, 약 10MB), `models/best.pt`(다시 학습할 때 출발점). `training_model/v4_merged_default/`에 같은 파일이 `v4_merged_default.onnx/.pt` 이름으로 있습니다.
 - 전처리: 비율 유지로 640에 맞추고 남는 곳을 회색 114로 채우는 letterbox.
 
 ### 클래스 (v1·v2·v3 모두 같음, 번호 순서를 바꾸지 마세요)
@@ -75,21 +104,21 @@ v3 후보 3개를 함께 학습해 비교했고 **`v3_merged_default`를 골랐�
 | 빈 벨트 | 없음 (빈 라벨) | |
 
 ### 속도
-- 컨베이어 PC(CPU)에서 v2 기준 1장 약 60~70ms(C# 앱). v3는 같은 크기(`yolo26n`)라 같습니다.
+- 컨베이어 PC(CPU)에서 v2 기준 1장 약 60~70ms(C# 앱). v3·v4는 같은 크기(`yolo26n`)라 같습니다.
 
-## 3. 데이터 (v3)
+## 3. 데이터 (v4)
 
 | 클래스 | train | val | test(옛 출처) | 컨베이어 시험 (`test_conveyor/`) |
 |---|---:|---:|---:|---:|
 | 0 crack_iphone | 342 | 96 | 26 | 20 |
 | 1 iphon16_white | 250 | 50 | 7 | 20 |
 | 2 iphone_12_pro_silver | 268 | 64 | 33 | 8 |
-| 3 iphone15pro_Natural_Titanium | 241 | 41 | 0 | 10 |
+| 3 iphone15pro_Natural_Titanium | 271 | 46 | 0 | 25 |
 | 4 iphone_14_white | 246 | 31 | 12 | 10 |
 | 빈 벨트 (박스 없음) | 20 | 4 | — | 6 |
-| **합계 1,731장 + 시험 74장** | 1,367 | 286 | 78 | 74 |
+| **합계 1,766장 + 시험 89장** | 1,397 | 291 | 78 | 89 |
 
-- **v2 데이터 1,163장**(이전 README·`split.txt` 그대로) + **우드락 컨베이어 사진 568장**(`conv_` 로 시작).
+- **v2 데이터 1,163장**(이전 README·`split.txt` 그대로) + **오전 우드락 컨베이어 사진 568장**(`conv_` 로 시작, v3에서 추가) + **오후 15 Pro 35장**(`conv2_15__`, v4에서 추가).
 - 컨베이어 사진 출처와 번호 변환 (김하균님 zip, 라벨은 옛 체계 `target_iphone, other_phone, crack, <기종>` 의 3번):
 
   | 이름 앞부분 | 원래 | → 번호 | 학습에 쓴 장수 |
@@ -101,14 +130,16 @@ v3 후보 3개를 함께 학습해 비교했고 **`v3_merged_default`를 골랐�
   | `conv_crack8__` | 학습용 crack_iphone (깨진 아이폰8) | 0 | 90 |
   | `conv_12promax__` | 학습용 iphone 12_pro_max (깨진 12 Pro Max) | 0 | 84 (라벨 없는 6장 제외) |
   | `conv_empty__` | 빈 컨베이어 벨트 | 빈 라벨 | 24 (시험 6장 별도) |
+  | `conv2_15__` (v4) | 학습용_iphone15pro (오후 15:21~15:23 촬영 50장) | 3 | 35 (첫 촬영 묶음 15장은 시험용 `test2_15__`) |
 
 - **시험용 사진과 완전히 같은 파일은 학습에서 뺐습니다**(16 화이트 20, 15 Pro 10, 14 화이트 10, 12 Pro 8(시험 10장 중 중복 2), 깨진 폰 20).
+- v4의 오후 15 Pro: 함께 받은 시험용 10장이 학습용 50장 안의 같은 사진이어서, 김하균님 동의로 **첫 촬영 묶음(15:21:11~16) 15장을 통째로 시험용**으로 빼고 나머지 35장을 학습(그중 마지막 5장은 val)에 씀.
 - 컨베이어 사진의 val: 출처마다 **촬영 시간 순 마지막 약 15%**(연속 묶음째).
 - 박스 위치는 라벨 그대로, 번호만 바꿈.
 
 ## 4. 학습 설정
 
-`yolo26n.pt`, 이미지 640, 300 에포크(patience 100 → **248회째 자동 종료, 148회째가 최고**), 배치 16, Ultralytics 기본 증강(hsv_h 0.015, hsv_s 0.7, hsv_v 0.4, fliplr 0.5, mosaic 1.0), workers 6, RAM 캐시. 세 후보를 GPU 하나로 동시에 학습해 약 66분. `models/settings.json` 참고.
+`yolo26n.pt`, 이미지 640, 300 에포크(patience 100 → **222회째 자동 종료, 122회째가 최고**), 배치 16, Ultralytics 기본 증강(hsv_h 0.015, hsv_s 0.7, hsv_v 0.4, fliplr 0.5, mosaic 1.0), workers 6, RAM 캐시. 두 후보를 GPU 하나로 동시에 학습해 약 45분. `models/settings.json` 참고. (v3와 같은 설정, 데이터만 추가)
 
 ## 5. 폴더 구성
 
@@ -118,15 +149,16 @@ all_phones/
 ├─ classes.txt                   클래스 5개
 ├─ split.txt                     사진별 train/val/test
 ├─ make_dataset.py               split.txt 대로 dataset/ 만들기 (빈 라벨 = 배경 사진 포함)
-├─ images/  labels/              사진·라벨 1,731장 (v2 1,163 + 컨베이어 568)
-├─ test_conveyor/<클래스>/        우드락 컨베이어 시험 사진 74장 (라벨 없음, 폴더 이름이 정답)
+├─ images/  labels/              사진·라벨 1,766장 (v2 1,163 + 오전 컨베이어 568 + 오후 15 Pro 35)
+├─ test_conveyor/<클래스>/        우드락 컨베이어 시험 사진 89장 (라벨 없음, 폴더 이름이 정답)
 ├─ models/
-│  ├─ best.onnx  best.pt         v3 (v3_merged_default)
+│  ├─ best.onnx  best.pt         v4 (v4_merged_default)
 │  ├─ settings.json  train_log.txt
 │  └─ runs/iphone_detector/      results.csv, 그래프, weights/
 ├─ scripts/eval_v2.py            (v2 때 평가, Detector·판정 함수 제공)
-├─ scripts/eval_v3.py            v2 ↔ v3 비교 (1번 표)
-├─ results_v3_20261021.txt       eval_v3.py 출력
+├─ scripts/eval_v3.py            모델 비교 (1번 표; --model 로 모델 지정)
+├─ results_v4_20261021.txt       eval_v3.py 출력 (v3 ↔ v4)
+├─ results_v3_20261021.txt       eval_v3.py 출력 (v2 ↔ v3, v3 때)
 ├─ results_v2_20261021.txt, results_old_vs_new_20261021.txt   v2 때 기록
 ├─ from_local_pc_20261020/       컨베이어 PC 점검 자료 (v1 때)
 └─ .gitignore                    dataset/ 제외
@@ -148,8 +180,8 @@ py -3.13 -X utf8 all_phones/scripts/eval_v3.py --model all_phones/models/best.on
 
 ## 남은 문제
 
-1. 실제 컨베이어 실물 시험 미실시 (0번 3단계).
+1. 실제 컨베이어 실물 시험 미실시 (0번 3단계). 특히 15 Pro ↔ 12 Pro 실버.
 2. 컨베이어 시험 사진이 학습 사진과 같은 촬영 → 점수 낙관적.
 3. 우드락 전 사진의 스티커 붙은 흰 폰 2장을 불량으로 판정.
-4. 15 Pro는 옛 출처 시험 사진이 없음.
+4. 15 Pro는 옛 출처 시험 사진이 없음. 12 Pro 실버 컨베이어 시험 사진은 오전 8장뿐.
 5. 박스 기준 통일(`from_local_pc_20261020/HANDOFF.md` 4번)은 합의가 필요해 하지 않았음.

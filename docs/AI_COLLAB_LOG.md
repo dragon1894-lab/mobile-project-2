@@ -474,3 +474,13 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
 - 저장소: `all_phones/` 사진·라벨에 컨베이어 568장 추가, `test_conveyor/` 74장, `models/`를 v3로 교체, `split.txt` 갱신, `make_dataset.py`(빈 라벨=배경 포함), `scripts/eval_v3.py`, `results_v3_20261021.txt`. `training_model/v3_merged_default/` 추가, v2는 비교용으로 표시. 확인: `make_dataset.py`가 학습 때와 사진·라벨까지 같은 분할을 만들고, `eval_v3.py`가 같은 수치를 냄.
 - 주의: 컨베이어 시험 사진이 학습 사진과 같은 촬영(연속 사진) → 100%는 낙관적. 실물 시험 전.
 - 다음 작업(컨베이어 PC): `all_phones/README.md` 0번 — 앱 `04_Vision/models/best.onnx`를 v3로 교체(SHA256 `ba0144a9…c25c1`, model_info.json 갱신), 실물 시험, 결과 기록.
+
+### 2026-10-21 / Claude(학습 PC) / all_phones v4(v4_merged_default)로 교체 — 15 Pro↔12 Pro 착각 수정
+
+- 종류: 학습 데이터·모델, 문서 (앱·서버 코드 변경 없음)
+- 근거: 김하균님이 v3를 컨베이어에서 돌려 보니 **15 Pro를 12 Pro 실버로 인식**. 오후(15:21~15:23)에 우드락 컨베이어에서 15 Pro 50장을 새로 찍어 라벨링(옛 번호 3 = 새 번호 3) + 시험용 10장 전달. 시험용 10장이 학습용 50장 안의 같은 사진이어서, 동의를 받아 **첫 촬영 묶음 15장을 통째로 시험용**으로 빼고 35장을 학습에 사용. (그 전에 받은 `추가 학습.zip` 30장은 시험 사진 복사본·기존 사진이 대부분이라 쓰지 않음.)
+- 학습: v3 데이터 1,731장 + 15 Pro 35장, 후보 2개 — `v4_merged_default`(v3와 같은 설정), `v4_merged_conveyor`(hsv_s 0.3·hsv_v 0.2·fliplr 0).
+- 결과(앱 판정, 신뢰도 0.45): 새 15 Pro 시험 15장 v3 **4/15**(11장 12 Pro로) → v4 둘 다 **15/15**. 컨베이어 시험 전체 89장 v3 78 → v4 89. 12 Pro 실버 8/8 유지(반대 쏠림 없음), 예전 보류 77/78 유지. 두 후보 결과가 같아 **v4_merged_default 채택**.
+- 저장소: `all_phones/`에 15 Pro 35장(`conv2_15__`)·시험 15장(`test_conveyor/iphone15pro_Natural_Titanium/test2_15__`) 추가, `models/` = v4, `split.txt`, `results_v4_20261021.txt`, README v4로 갱신(**컨베이어 PC에서 v3 모델 삭제 후 v4 하나만 쓰도록** 단계 추가, SHA256 `55ac3efd…87cfd`). `training_model/v4_merged_default/` 추가, v3는 비교용 표시. 확인: `make_dataset.py`가 학습 때와 같은 분할, `eval_v3.py`가 같은 수치.
+- 주의: 새 15 Pro 시험 사진은 학습 묶음과 몇 초 차이 같은 시간대 → 점수 낙관적. 12 Pro 실버 컨베이어 시험은 오전 8장뿐.
+- 다음 작업(컨베이어 PC): `all_phones/README.md` 0번 — v3 삭제, v4 교체, 실물 시험(특히 15 Pro ↔ 12 Pro), 결과 기록.
