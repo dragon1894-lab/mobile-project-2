@@ -11,5 +11,6 @@
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../../00_Shared/ProductionLine.Shared/ProductionLine.Shared.csproj" />
     <Compile Include="..\..\00_Shared\ProductionLine.ChatUI\GroupChatPanel.cs" Link="Chat\GroupChatPanel.cs" />
+    <Compile Include="..\..\00_Shared\ProductionLine.ConnectUI\*.cs" Link="Connect\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

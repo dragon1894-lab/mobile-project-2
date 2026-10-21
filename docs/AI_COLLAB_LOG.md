@@ -484,3 +484,17 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
 - 저장소: `all_phones/`에 15 Pro 35장(`conv2_15__`)·시험 15장(`test_conveyor/iphone15pro_Natural_Titanium/test2_15__`) 추가, `models/` = v4, `split.txt`, `results_v4_20261021.txt`, README v4로 갱신(**컨베이어 PC에서 v3 모델 삭제 후 v4 하나만 쓰도록** 단계 추가, SHA256 `55ac3efd…87cfd`). `training_model/v4_merged_default/` 추가, v3는 비교용 표시. 확인: `make_dataset.py`가 학습 때와 같은 분할, `eval_v3.py`가 같은 수치.
 - 주의: 새 15 Pro 시험 사진은 학습 묶음과 몇 초 차이 같은 시간대 → 점수 낙관적. 12 Pro 실버 컨베이어 시험은 오전 8장뿐.
 - 다음 작업(컨베이어 PC): `all_phones/README.md` 0번 — v3 삭제, v4 교체, 실물 시험(특히 15 Pro ↔ 12 Pro), 결과 기록.
+
+### 2026-10-21 / Claude / 서버 연결 창 추가 (서버 열기·접속, 자동 찾기, IPv4 표시) — 노트북용
+
+- 종류: 구현, 검증 (기준: 김하균 PC `with claude\노트북용` = 저장소 `with-claude/`)
+- 근거(김하균님 요청): 두 PC에서 서버를 각각 켜서 단체 채팅이 서로 안 보였음(앱 기본 주소가 127.0.0.1이라 PC마다 다른 서버·DB 사용). 환경변수 대신 버튼으로 연결하고, 주소는 127.0.0.1 대신 서버 PC의 IPv4로 보이게.
+- 한 일:
+  1. 공용 `ProductionLine.Shared/ServerDiscovery.cs`: UDP 5051 찾기 약속(요청·답장), 이 PC IPv4 목록(공유기 주소 우선, VPN 100.64/10 뒤로), 주소 입력 정리.
+  2. 서버 `Infrastructure/ServerDiscoveryResponder.cs`(BackgroundService): 찾기 요청에 포트·PC 이름·IPv4로 답함. 포트를 못 열면 경고만. `Program.cs`: 등록 + 켜질 때 창에 "다른 PC 접속 주소: http://IPv4:5050" 표시.
+  3. 공용 화면 `00_Shared/ProductionLine.ConnectUI/`(두 앱 csproj에 링크): `ServerConnectForm` — 관리자 앱은 "서버 열기 / 서버 접속", 작업자 앱은 "서버 접속"만. 자동 찾기 목록 + [접속], IP 직접 입력, 연결 전 `GET /` 응답 확인, 마지막 주소 기억(`%LOCALAPPDATA%\ProductionLine\last-server.txt`). `ServerLauncher` — 서버 열기 시 앱 옆 `Server\ProductionLine.Server.exe` 또는 개발 폴더 `03_Server\...\bin\(Debug|Release)\net8.0\`를 찾아 실행(개발 폴더면 프로젝트 폴더를 contentRoot로 → VS 실행과 같은 DB), 이미 켜져 있으면 그 서버에 접속, 관리자 앱 종료 시 켠 서버를 끌지 물음.
+  4. 두 앱 `Program.cs`: 로그인 전에 연결 창 → 고른 주소를 프로세스 환경변수 `PRODUCTIONLINE_SERVER_URL`로 넣어 기존 `new ProductionLineApiClient()`가 그대로 사용. 작업자 앱 아래 연결 표시에 서버 주소 추가(`UserMainForm.cs` 한 줄).
+- 검증: 솔루션 빌드 경고 0·오류 0. 연결 창 시험 17개(자동 찾기, 같은 서버 한 줄·공유기 주소 우선, 작업자 창에 서버 열기 없음, 선택 접속, 직접 입력, 없는 주소·잘못된 형식 안내, 개발/배포 폴더에서 서버 찾기, 서버 켜고 IPv4로 접속, 이미 켜진 서버 재사용, 라디오 하나만 선택, 서버 끄기) 통과. 회귀: 서버 시험 48개·화면 시험 17개 통과. 시험 중 VPN 주소(100.91.x)가 먼저 선택되던 문제와 라디오 두 개가 동시에 선택되던 문제를 고침.
+- 미실행: **실제 두 PC 연결**(다른 PC에서 자동 찾기·접속). 서버 PC 방화벽에서 TCP 5050과 UDP 5051(또는 서버 프로그램 '허용')이 필요.
+- 원본 `with claude` 폴더에는 넣지 않음(김하균 결정: 노트북용만).
+- 조원 전달사항: 조영준·장서진 — 두 앱 `Program.cs`와 csproj에 연결 창이 들어감. 다른 PC에 나눠 줄 때 관리자 앱의 "서버 열기"를 쓰려면 관리자 앱 폴더 옆 `Server\`에 서버 실행 파일을 넣거나 저장소 폴더 구조 그대로 빌드해서 실행.

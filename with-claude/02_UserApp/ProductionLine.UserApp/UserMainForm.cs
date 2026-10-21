@@ -211,7 +211,7 @@ public sealed partial class UserMainForm : Form
             var latest = inspections.FirstOrDefault();
             _result.Text = latest == null ? "검사 결과 대기 중" : $"최근 판정: {ResultText(latest.Result)}    형태 {latest.ShapeScore:P0} / 색상 {latest.ColorScore:P0}\r\n{latest.Reason}    |    {latest.InspectedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
             _result.ForeColor = latest?.Result == InspectionResultType.Defect ? UserTheme.Red : UserTheme.Text;
-            _connection.Text = $"연결됨 · {DateTime.Now:HH:mm:ss}";
+            _connection.Text = $"연결됨 · 서버 {_api.BaseAddress.Authority} · {DateTime.Now:HH:mm:ss}";
             ShowIssue();
         }
         catch (Exception ex) { await HandleServerFailureAsync(ex, "조회 실패"); if (showError && !IsDisposed && !SessionExpired) MessageBox.Show(this, ex.Message, "조회 오류"); }

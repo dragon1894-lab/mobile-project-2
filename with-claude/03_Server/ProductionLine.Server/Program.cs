@@ -91,7 +91,26 @@ builder.Services.AddSingleton(new RequestLogOptions
 builder.Services.AddSingleton<RequestLogService>();
 builder.Services.AddHostedService<RequestLogCleanupService>();
 
+// 서버 찾기: 앱의 "서버 접속" 창이 UDP 5051로 물어보면 이 PC의 IPv4와 포트를 답함 (Infrastructure/ServerDiscoveryResponder.cs)
+builder.Services.AddHostedService<ServerDiscoveryResponder>();
+
 var app = builder.Build();
+
+// 서버가 켜지면 창에 이 PC의 IPv4 주소를 크게 보여 줌 → 다른 PC는 이 주소로 접속
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var port = ServerDiscoveryResponder.HttpPort(app.Configuration);
+    var addresses = LocalNetwork.GetLanIPv4();
+    Console.WriteLine();
+    Console.WriteLine("==================================================");
+    Console.WriteLine(" 생산라인 서버가 켜졌습니다.");
+    if (addresses.Count == 0) Console.WriteLine($" 네트워크 주소 없음 (이 PC에서만 접속: http://127.0.0.1:{port})");
+    foreach (var address in addresses) Console.WriteLine($" 다른 PC 접속 주소: http://{address}:{port}");
+    Console.WriteLine(" 앱의 '서버 접속'에서 자동으로 찾거나 위 주소를 입력하세요.");
+    Console.WriteLine(" 처음 켤 때 Windows 방화벽 창이 뜨면 '허용'을 누르세요.");
+    Console.WriteLine("==================================================");
+    Console.WriteLine();
+});
 
 // ===== 3. DB 준비 ===== (자세한 내용은 Infrastructure/DatabaseInitializer.cs)
 DatabaseInitializer.Initialize(
