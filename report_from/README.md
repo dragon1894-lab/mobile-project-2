@@ -25,7 +25,7 @@
 | 칸 | 내용 | DB 표 |
 |---|---|---|
 | 1. 검사 요약 | 총 검사, 정상, 불량, 판정 불가, 불량률 | `Inspections` |
-| 2. 기종별 분석 | 기종, 검사, 정상, 불량, 불량률 | `Inspections.PhoneModel` |
+| 2. 기종별 분석 | 기종(YOLO 클래스 이름 그대로), 검사, 정상, 불량 | `Inspections.PhoneModel` |
 | 3. 센서 기록 | 시간대별 평균·최고 온도, 습도, 가스(MQ-9 A0) | `LineHardwareLogs` (10초마다, 7일 보관) |
 | 4. 문제·조치 | 등록 시각, 문제, 상태, 종결 시각 | `Issues`, `IssueHistories` |
 | 5. 검사 이력 | 검사 시각, 판정, 기종, 신뢰도 | `Inspections` |
@@ -33,18 +33,27 @@
 
 불량률 = 불량 ÷ (정상 + 불량) × 100 (판정 불가는 빼고 계산, 관리자 앱과 같은 기준)
 
-## 학습 컴퓨터에 알릴 것 — YOLO 클래스 이름
+## 학습 컴퓨터에 알릴 것 — YOLO 클래스 이름 (2026-10-23 확정)
 
-- 불량(깨진 휴대폰)은 `crack iphone`처럼 나오면 안 되고 **`기종_crack`** 형식으로 나와야 함
-  - 예: `iphone_12_pro_crack`, `iphone_13_crack`
-  - 정상은 `iphone_12_pro`, `iphone_13`처럼 기종 이름만
-  - 전부 소문자, 띄어쓰기 대신 `_`
-- 이 이름 그대로 DB의 기종 칸(`PhoneModel`)과 보고서에 들어감
-- 이름 규칙에 맞춰 **다시 학습할 예정**
+- 불량 클래스 이름 2개 (예전 `crack_iphone` 대신):
+  - **`iphone12_pro_max_crack`** — 깨진 12 Pro Max
+  - **`iphone_8_crack`** — 깨진 8
+  - 깨진 휴대폰만 불량으로 학습함. **이 클래스가 나오면 무조건 불량** (12 Pro Max·8 정상은 안 나옴)
+  - 이 이름으로 **다시 학습할 예정** (김하균)
+- 정상 기종 클래스는 지금 모델(v4) 그대로: `iphon16_white`, `iphone_12_pro_silver`, `iphone15pro_Natural_Titanium`, `iphone_14_white`
+- 클래스 이름이 그대로 DB의 기종 칸(`PhoneModel`)과 보고서에 들어감
+
+### ⚠️ 새 모델을 넣기 전에 앱 코드도 같이 고쳐야 함
+
+지금 `04_Vision/ProductionLine.Vision/YoloOnnxInspector.cs`는 **`crack_iphone`이라는 이름이 있을 때만 불량**으로 판정합니다.
+`iphone12_pro_max_crack`, `iphone_8_crack`으로 바꾼 모델을 그대로 넣으면:
+- `crack_iphone`이 없어서 "불량+기종 통합 모델"로 인식되지 않고
+- 두 이름 모두 `iphon…`으로 시작해서 **정상 기종으로 취급** → 깨진 휴대폰이 정상이나 판정 불가로 나올 수 있음
+
+→ 이름이 **`_crack`으로 끝나면 불량**으로 보도록 Vision 코드를 고친 뒤 새 모델을 넣어야 합니다. (Vision 담당과 상의)
 
 ## 아직 정할 것
 
 - 센서 표 시간 간격: 1시간 / 30분 / 10분
 - 보고서 버튼 위치: 관리자 앱만 / 작업자 앱도
 - 센서 기록 보관 기간: 지금 7일 (7일보다 긴 기간 보고서는 센서 칸이 비게 됨)
-- 기종별 분석에서 `iphone_12_pro`와 `iphone_12_pro_crack`을 한 줄(기종 iphone_12_pro, 불량 수에 crack 포함)로 묶을지
