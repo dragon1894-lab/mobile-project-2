@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+.dotnet-home/
+*.user
+03_Server/ProductionLine.Server/data/
+03_Server/ProductionLine.Server/App_Data/
