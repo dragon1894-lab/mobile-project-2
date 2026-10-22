@@ -23,7 +23,7 @@ public sealed partial class UserMainForm
         photo.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         photo.Controls.Add(_historyImageCaption, 0, 0);
         photo.Controls.Add(_historyImage, 0, 1);
-        panels.Controls.Add(_history, 0, 0);
+        panels.Controls.Add(GridWithDarkScrollBar(_history), 0, 0);
         panels.Controls.Add(photo, 1, 0);
         return panels;
     }

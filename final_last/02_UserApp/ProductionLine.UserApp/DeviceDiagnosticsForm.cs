@@ -11,10 +11,10 @@ public sealed class DeviceDiagnosticsForm : Form
     private readonly Button _refresh = new() { Text = "다시 확인", Dock = DockStyle.Fill };
     private readonly Label _status = new() { Text = "서버에서 장비 보고를 확인하고 있습니다.", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true };
     private readonly DataGridView _devices = new() { Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false,
-        RowHeadersVisible = false, AutoGenerateColumns = false, BackgroundColor = Color.White,
+        RowHeadersVisible = false, AutoGenerateColumns = false, BackgroundColor = IndustrialPalette.Surface,
         AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells, SelectionMode = DataGridViewSelectionMode.FullRowSelect };
     private readonly TextBox _appStatus = new() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true,
-        ScrollBars = ScrollBars.Vertical, BackColor = Color.White };
+        ScrollBars = ScrollBars.None, BackColor = Color.FromArgb(13, 23, 34), ForeColor = IndustrialPalette.Text };
     private bool _checking, _resourcesDisposed;
     public DeviceDiagnosticsSnapshot? LastSnapshot { get; private set; }
 
@@ -23,9 +23,9 @@ public sealed class DeviceDiagnosticsForm : Form
         _api = api; _lineId = lineId;
         Text = $"LINE {lineId} · 장비 상태 확인";
         ClientSize = new Size(1080, 670); MinimumSize = new Size(820, 540);
-        Font = new Font("맑은 고딕", 10); BackColor = Color.FromArgb(242, 245, 249);
+        Font = new Font("Noto Sans KR", 10); BackColor = IndustrialPalette.Canvas; ForeColor = IndustrialPalette.Text;
         StartPosition = FormStartPosition.CenterParent;
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(14) };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(14), BackColor = IndustrialPalette.Canvas };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -39,10 +39,16 @@ public sealed class DeviceDiagnosticsForm : Form
         AddColumn("장비", 130); AddColumn("연결 핀 / USB", 150); AddColumn("확인 내용", 0); AddColumn("마지막 보고", 100);
         _devices.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         _devices.DefaultCellStyle.Padding = new Padding(4);
+        _devices.EnableHeadersVisualStyles = false; _devices.BorderStyle = BorderStyle.None; _devices.GridColor = IndustrialPalette.Border;
+        _devices.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle { BackColor = IndustrialPalette.SurfaceRaised, ForeColor = IndustrialPalette.Text, Font = new Font("Noto Sans KR", 9, FontStyle.Bold) };
+        _devices.DefaultCellStyle.BackColor = IndustrialPalette.Surface; _devices.DefaultCellStyle.ForeColor = IndustrialPalette.Text;
+        _devices.DefaultCellStyle.SelectionBackColor = Color.FromArgb(24, 75, 82); _devices.DefaultCellStyle.SelectionForeColor = Color.White;
         _devices.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
         layout.Controls.Add(_devices, 0, 2);
         layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "작업자 앱의 최근 오류·검사 기록 (상태 보고이며 AI 명령이 아닙니다.)", TextAlign = ContentAlignment.MiddleLeft }, 0, 3);
         layout.Controls.Add(_appStatus, 0, 4); Controls.Add(layout);
+        _refresh.FlatStyle = FlatStyle.Flat; _refresh.FlatAppearance.BorderColor = IndustrialPalette.Border;
+        _refresh.BackColor = IndustrialPalette.SurfaceRaised; _refresh.ForeColor = IndustrialPalette.Text;
         _refresh.Click += async (_, _) => await RefreshDiagnosticsAsync();
         _timer.Tick += async (_, _) => await RefreshDiagnosticsAsync();
         Shown += async (_, _) => { _timer.Start(); await RefreshDiagnosticsAsync(); };

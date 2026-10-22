@@ -10,17 +10,20 @@ public sealed partial class UserMainForm : Form
     private readonly TabControl _pages = new PageHost { Dock = DockStyle.Fill };
     private readonly ComboBox _lines = new() { Width = 180, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly Label _connection = new() { Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(14, 0, 14, 0) };
-    private readonly Label _counts = new() { Dock = DockStyle.Top, Height = 64, Font = new Font("맑은 고딕", 14, FontStyle.Bold) };
+    private readonly Label _counts = new() { Dock = DockStyle.Top, Height = 64, Font = new Font("Noto Sans KR", 14, FontStyle.Bold) };
     private readonly Label _lineInfo = new() { Dock = DockStyle.Fill, AutoEllipsis = true };
     private readonly Label _result = new() { Dock = DockStyle.Top, Height = 80 };
+    private readonly Label[] _liveMetricValues = Enumerable.Range(0, 4).Select(_ => new Label { Dock = DockStyle.Fill, Text = "—", TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 20, FontStyle.Bold) }).ToArray();
+    private readonly Label[] _liveHardwareValues = Enumerable.Range(0, 4).Select(_ => new Label { Dock = DockStyle.Fill, Text = "—", TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 14, FontStyle.Bold), ForeColor = Color.White }).ToArray();
+    private readonly Label _liveAlert = new() { Dock = DockStyle.Fill, Text = "미해결 문제를 확인 중입니다.", TextAlign = ContentAlignment.MiddleLeft, ForeColor = IndustrialPalette.Amber, Padding = new Padding(12, 0, 0, 0) };
     private readonly Label _videoStatus = new() { Dock = DockStyle.Bottom, Height = 48, Text = "카메라 미연결 · 카메라 연결 버튼을 누르세요." };
     private readonly PictureBox _video = new CameraCanvas { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(16, 28, 43) };
     private readonly DataGridView _history = Grid();
     private readonly DataGridView _issues = Grid();
-    private readonly TextBox _issueDetail = new() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, BackColor = Color.White };
+    private readonly TextBox _issueDetail = new() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.None };
     private Button _acknowledge = null!, _saveAction = null!, _requestCompletion = null!;
     private bool _savingAction;
-    private readonly TextBox _action = new() { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical, PlaceholderText = "실제로 점검하거나 조치한 내용을 입력하세요." };
+    private readonly TextBox _action = new() { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.None, PlaceholderText = "실제로 점검하거나 조치한 내용을 입력하세요." };
     private readonly RichTextBox _aiMessages = Messages();
     private readonly TextBox _aiInput = ChatInput();
     private readonly Button _aiSend = new() { Text = "AI에게 보내기", Width = 140, Height = 42 };
@@ -39,23 +42,25 @@ public sealed partial class UserMainForm : Form
     public UserMainForm(ProductionLineApiClient api)
     {
         _api = api;
-        Text = "생산라인 검사 및 문제 대응 시스템 · 사용자 [모던 UI v6.3]";
-        Size = new Size(1440, 960);
-        MinimumSize = new Size(1200, 800);
+        Text = "LINE / OPS · 생산라인 검사 및 설비 모니터링";
+        Size = new Size(1500, 940);
+        MinimumSize = new Size(1240, 780);
         StartPosition = FormStartPosition.CenterScreen;
-        Font = new Font("맑은 고딕", 10);
+        Font = new Font("Noto Sans KR", 10);
         BackColor = UserTheme.Canvas;
         Controls.Add(BuildModernShell());
+        _groupChat = new GroupChatPanel(api) { Dock = DockStyle.Fill, DarkMode = true, BackColor = IndustrialPalette.Canvas, ForeColor = IndustrialPalette.Text };
         AddPage("실시간 검사", InspectionPage());
-        AddPage("검사 개수 · 지난 기록", HistoryPage());
-        AddPage("문제 · 조치", IssuePage());
+        AddPage("검사 결과 · 사진", HistoryPage());
+        AddPage("설비 · 센서", EquipmentPage());
+        AddPage("문제 조치", IssuePage());
         AddPage("AI 상담", ChatPage());
-        _groupChat = new GroupChatPanel(api) { Dock = DockStyle.Fill };
-        AddPage("단체 채팅", _groupChat);
-        var groupMenu = _navigation[^1];
+        AddPage("통계", StatisticsPage());
+        AddPage("설정", SettingsPage());
+        var groupMenu = _navigation[3];
         _groupChat.UnreadChanged += (_, _) => groupMenu.Text = _groupChat.UnreadCount > 0
-            ? $"05   단체 채팅 ({_groupChat.UnreadCount})"
-            : "05   단체 채팅";
+            ? $"⚠   문제 조치  ({_groupChat.UnreadCount})"
+            : "⚠   문제 조치";
         ApplyModernControls(this);
         _lines.SelectedIndexChanged += async (_, _) =>
         {
@@ -81,40 +86,195 @@ public sealed partial class UserMainForm : Form
 
     private Control InspectionPage()
     {
-        var scroll = new InspectionScrollPanel { Dock = DockStyle.Fill };
-        var layout = new TableLayoutPanel { ColumnCount = 1, RowCount = 4, Padding = new Padding(2), Margin = Padding.Empty };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 298));
-        _result.Font = new Font("맑은 고딕", 10, FontStyle.Bold);
-        layout.Controls.Add(Surface(null, _result), 0, 0);
-        var monitor = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
-        monitor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        monitor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 286));
-        monitor.Controls.Add(RecognitionVideoPanels(), 0, 0);
-        monitor.Controls.Add(Surface(null, _sensorTrends), 1, 0);
-        layout.Controls.Add(monitor, 0, 1);
-        var statuses = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
-        statuses.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65)); statuses.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
-        _hardwareSummary.Font = new Font("맑은 고딕", 9);
-        _remoteNotice.Font = new Font("맑은 고딕", 9); _remoteNotice.ForeColor = UiMuted;
-        statuses.Controls.Add(_hardwareSummary, 0, 0); statuses.Controls.Add(_remoteNotice, 1, 0);
-        layout.Controls.Add(statuses, 0, 2);
-        _remoteControlArea = CameraControls();
-        layout.Controls.Add(Surface("카메라 및 검사 설정", _remoteControlArea), 0, 3);
-        scroll.SetContent(layout, 760);
-        return scroll;
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = Padding.Empty, Margin = Padding.Empty };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 74)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26));
+        var cameraSide = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(0, 0, 10, 0) };
+        cameraSide.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); cameraSide.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
+        var camera = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+        camera.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); camera.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        camera.Controls.Add(_video, 0, 0); camera.Controls.Add(_videoStatus, 0, 1);
+        cameraSide.Controls.Add(Surface(null, camera), 0, 0);
+        cameraSide.Controls.Add(Surface(null, BuildLiveOperationControls()), 0, 1);
+        layout.Controls.Add(cameraSide, 0, 0);
+
+        var summary = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = Padding.Empty };
+        summary.RowStyles.Add(new RowStyle(SizeType.Percent, 32)); summary.RowStyles.Add(new RowStyle(SizeType.Percent, 35)); summary.RowStyles.Add(new RowStyle(SizeType.Percent, 33));
+        summary.Controls.Add(Surface("현재 검사", BuildCurrentInspectionCard()), 0, 0);
+        summary.Controls.Add(Surface("오늘 생산", BuildLiveMetricCards()), 0, 1);
+        summary.Controls.Add(Surface("설비 요약", BuildLiveEquipmentSummary()), 0, 2);
+        layout.Controls.Add(summary, 1, 0);
+        return layout;
     }
+
+    private Control BuildCurrentInspectionCard()
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
+        layout.Controls.Add(_recognizedVideo, 0, 0); layout.SetRowSpan(_recognizedVideo, 2);
+        _result.Font = new Font("Noto Sans KR", 10, FontStyle.Bold); _result.Dock = DockStyle.Fill; _result.Height = 0;
+        layout.Controls.Add(_result, 1, 0); layout.Controls.Add(_recognizedCaption, 1, 1);
+        return layout;
+    }
+
+    private Control BuildLiveMetricCards()
+    {
+        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        string[] names = ["검사", "정상", "불량", "불량률"];
+        Color[] colors = [Color.FromArgb(88,174,255), IndustrialPalette.Green, IndustrialPalette.Red, IndustrialPalette.Red];
+        for (int i = 0; i < 4; i++)
+        {
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            var box = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(4), BackColor = Color.FromArgb(23, 39, 55) };
+            box.RowStyles.Add(new RowStyle(SizeType.Percent, 42)); box.RowStyles.Add(new RowStyle(SizeType.Percent, 58));
+            box.Controls.Add(new Label { Dock = DockStyle.Fill, Text = names[i], ForeColor = UiMuted, TextAlign = ContentAlignment.BottomCenter }, 0, 0);
+            _liveMetricValues[i].ForeColor = colors[i]; box.Controls.Add(_liveMetricValues[i], 0, 1); grid.Controls.Add(box, i % 2, i / 2);
+        }
+        return grid;
+    }
+
+    private Control BuildLiveEquipmentSummary()
+    {
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Margin = Padding.Empty };
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 55)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 32)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
+        var row = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1, Margin = Padding.Empty };
+        string[] names = ["온도", "습도", "가스 A0", "분류기"];
+        for (int i = 0; i < 4; i++)
+        {
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            var cell = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, Margin = new Padding(3), BackColor = Color.FromArgb(23,39,55) };
+            cell.RowStyles.Add(new RowStyle(SizeType.Absolute, 25)); cell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            cell.Controls.Add(new Label { Dock = DockStyle.Fill, Text = names[i], ForeColor = UiMuted, TextAlign = ContentAlignment.MiddleCenter }, 0, 0);
+            cell.Controls.Add(_liveHardwareValues[i], 0, 1); row.Controls.Add(cell, i, 0);
+        }
+        root.Controls.Add(row, 0, 0);
+        root.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "센서 상세 정보는 설비·센서 화면에서 확인", ForeColor = Color.FromArgb(74, 174, 244), TextAlign = ContentAlignment.MiddleLeft }, 0, 1);
+        root.Controls.Add(_liveAlert, 0, 2); return root;
+    }
+
+    private Control EquipmentPage()
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 3, Padding = Padding.Empty, Margin = Padding.Empty };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 56)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 44));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 170)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        var arduino = Surface("Arduino Mega 2560 연결", BuildArduinoConnectionPanel()); layout.Controls.Add(arduino, 0, 0); layout.SetColumnSpan(arduino, 2);
+        var sensors = Surface("환경 센서", _sensorTrends); sensors.Margin = new Padding(0, 0, 10, 10); layout.Controls.Add(sensors, 0, 1);
+        layout.Controls.Add(Surface("구동 장치", BuildActuatorPanel()), 1, 1);
+        _hardwareSummary.Font = new Font("Noto Sans KR", 9.5f); _hardwareSummary.ForeColor = IndustrialPalette.Green;
+        var footer = Surface(null, _hardwareSummary); layout.Controls.Add(footer, 0, 2); layout.SetColumnSpan(footer, 2);
+        return layout;
+    }
+
+    private Control BuildArduinoConnectionPanel()
+    {
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65)); root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        var controls = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true, Margin = Padding.Empty, Padding = new Padding(0, 10, 0, 0) };
+        controls.Controls.Add(new Label { Text = "●  장치 연결", AutoSize = true, ForeColor = IndustrialPalette.Green, Font = new Font("Noto Sans KR", 14, FontStyle.Bold), Padding = new Padding(0, 6, 20, 0) });
+        controls.Controls.Add(new Label { Text = "COM 포트", AutoSize = true, ForeColor = UiMuted, Padding = new Padding(0, 8, 4, 0) });
+        controls.Controls.Add(_conveyorPort); controls.Controls.Add(Button("포트 갱신", RefreshConveyorPorts)); controls.Controls.Add(_conveyorConnect);
+        controls.Controls.Add(Button("연결 해제", async () => await DisconnectConveyorAsync()));
+        root.Controls.Add(controls, 0, 0);
+        var info = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(12, 0, 0, 0), Margin = Padding.Empty };
+        info.Controls.Add(new Label { AutoSize = true, Text = "보드 정보      Arduino Mega 2560", ForeColor = UiMuted });
+        info.Controls.Add(new Label { AutoSize = true, Text = "펌웨어 정보   컨베이어 제어 V7", ForeColor = UiMuted });
+        info.Controls.Add(_arduinoSetup); root.Controls.Add(info, 1, 0);
+        _remoteControlAreas.Add(controls); _remoteControlAreas.Add(info);
+        // 벨트 연결 실패·COM 선택 안내·통신 오류 글자를 다시 표시합니다.
+        _conveyorState.Dock = DockStyle.Fill; _conveyorState.AutoSize = false; _conveyorState.AutoEllipsis = true;
+        _conveyorState.TextAlign = ContentAlignment.MiddleLeft; _conveyorState.ForeColor = UiMuted; _conveyorState.Padding = Padding.Empty;
+        root.Controls.Add(_conveyorState, 0, 1); root.SetColumnSpan(_conveyorState, 2);
+        return root;
+    }
+
+    private Control BuildActuatorPanel()
+    {
+        UpdateSortTimingSummary();
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Margin = Padding.Empty };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        for (int i = 1; i < 5; i++) root.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+        root.Controls.Add(DeviceHeader(), 0, 0);
+        root.Controls.Add(DeviceRow("▣  컨베이어 모터", "PUL D5 / DIR D6", _motorStatus, Button("벨트 구동", async () => await RunConveyorAsync()), Button("벨트 정지", async () => await StopConveyorAsync("벨트 정지 응답 확인"))), 0, 1);
+        var lightStatus = StatusLabel("자동 켜짐", IndustrialPalette.Green);
+        void SyncLightStatus() { lightStatus.Text = _lightState.Text.Contains("실패") ? "●  연결 실패" : _lightState.Text.Contains("진행 중") ? "●  작업 중" : _lightState.Text.Contains("꺼") ? "●  꺼짐" : "●  자동 켜짐"; lightStatus.ForeColor = _lightState.Text.Contains("실패") ? IndustrialPalette.Red : IndustrialPalette.Green; }
+        _lightState.TextChanged += (_, _) => SyncLightStatus(); SyncLightStatus();
+        root.Controls.Add(DeviceRow("●  검사 조명", "D7", lightStatus, Button("조명 켜기", async () => await SetInspectionLightAsync(true)), Button("조명 끄기", async () => await SetInspectionLightAsync(false))), 0, 2);
+        var sortStatus = StatusLabel("이동·유지 설정", UiMuted);
+        void SyncSortStatus() { sortStatus.Text = $"이동 {_sortTravelMs.Value / 1000m:0.#}s\r\n유지 {_sortHoldMs.Value / 1000m:0.#}s"; }
+        _sortTimingSummary.TextChanged += (_, _) => SyncSortStatus(); SyncSortStatus();
+        root.Controls.Add(DeviceRow("◫  불량 분류 서보", "D11", sortStatus, _automaticSort), 0, 3);
+        root.Controls.Add(DeviceRow("●  긴급 정지 버튼", "NC D12", _emergencyStatus, Button("잠금 해제", async () => await ResetEmergencyAsync())), 0, 4);
+        return root;
+    }
+
+    private static Control DeviceHeader()
+    {
+        var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, Margin = Padding.Empty };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32));
+        string[] titles = ["장치", "핀 정보", "현재 상태", "제어"];
+        for (int i = 0; i < titles.Length; i++)
+            header.Controls.Add(new Label { Dock = DockStyle.Fill, Text = titles[i], ForeColor = UiMuted, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(i == 0 ? 10 : 4, 0, 0, 0) }, i, 0);
+        return header;
+    }
+
+    // 구동 장치 표의 컨베이어·긴급 정지 상태: 고정 글자 대신 실제 장비 보고로 갱신합니다(UpdateLiveHardware).
+    private readonly Label _motorStatus = StatusLabel("미확인", UiMuted);
+    private readonly Label _emergencyStatus = StatusLabel("미확인", UiMuted);
+
+    private static Label StatusLabel(string text, Color color) => new()
+    {
+        Dock = DockStyle.Fill, Text = $"●  {text}", ForeColor = color,
+        TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, Margin = Padding.Empty
+    };
+
+    private Control DeviceRow(string name, string pin, Label status, params Control[] actions)
+    {
+        var row = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1, Margin = new Padding(0, 2, 0, 2), BackColor = Color.FromArgb(21, 36, 51), Padding = new Padding(0, 0, 4, 0) };
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32));
+        row.Controls.Add(new Label { Dock = DockStyle.Fill, Text = name, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Noto Sans KR", 9.3f, FontStyle.Bold), Padding = new Padding(10, 0, 0, 0), AutoEllipsis = true }, 0, 0);
+        row.Controls.Add(new Label { Dock = DockStyle.Fill, Text = pin, TextAlign = ContentAlignment.MiddleLeft, ForeColor = UiMuted, Padding = new Padding(4, 0, 0, 0), AutoEllipsis = true }, 1, 0);
+        status.Dock = DockStyle.Fill; status.AutoSize = false; status.AutoEllipsis = true; status.Margin = Padding.Empty; status.Padding = new Padding(4, 0, 4, 0); status.TextAlign = ContentAlignment.MiddleLeft;
+        row.Controls.Add(status, 2, 0);
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = Math.Max(1, actions.Length), RowCount = 1, Margin = Padding.Empty, Padding = new Padding(4, 8, 0, 8) };
+        for (int i = 0; i < actions.Length; i++)
+        {
+            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / actions.Length));
+            actions[i].Dock = DockStyle.Fill; actions[i].Tag = "compact"; actions[i].Margin = new Padding(i == 0 ? 0 : 4, 0, 0, 0);
+            panel.Controls.Add(actions[i], i, 0);
+        }
+        _remoteControlAreas.Add(panel);
+        row.Controls.Add(panel, 3, 0); return row;
+    }
+
+    private Control SettingsPage()
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(2), Margin = Padding.Empty };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42));
+        layout.Controls.Add(Surface("YOLO 검사 모델", BuildYoloSettingsControls()), 0, 0);
+        var guide = new Label { Dock = DockStyle.Fill, ForeColor = UiMuted, Font = new Font("Noto Sans KR", 10), Padding = new Padding(10), Text = "설정 적용 안내\r\n\r\n• 모델 변경은 검사를 중지한 뒤 적용합니다.\r\n• 카메라 번호는 실시간 검사 화면에서 선택합니다.\r\n• COM 포트와 펌웨어는 설비·센서 화면에서 관리합니다.\r\n• 관리자 원격 설정은 작업자 앱에 즉시 반영됩니다." };
+        layout.Controls.Add(Surface("운영 안내", guide), 1, 0);
+        return layout;
+    }
+
+    private Control BuildEquipmentGuide() => new Label
+    {
+        Dock = DockStyle.Fill, ForeColor = UiMuted, Font = new Font("Noto Sans KR", 9.5f), Padding = new Padding(8),
+        Text = "연결 장치\r\n• 컨베이어 PUL D5 / DIR D6\r\n• 검사 조명 D7\r\n• MQ-9 가스 AO → A0\r\n• DHT11 온습도 DATA → D30\r\n• MG996R 분류 서보 D11\r\n• NC 긴급정지 D12"
+    };
 
     private Control HistoryPage()
     {
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(8) };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = Padding.Empty };
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
-        layout.Controls.Add(BuildMetricCards(), 0, 0);
         _lineInfo.AutoSize = true;
         _lineInfo.AutoEllipsis = false;
         _lineInfo.Margin = Padding.Empty;
@@ -124,9 +284,9 @@ public sealed partial class UserMainForm : Form
         information.Controls.Add(_lineInfo, 0, 0);
         var informationCard = new RoundedSurface { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(14, 12, 14, 12), Margin = new Padding(0, 0, 0, 10) };
         informationCard.Controls.Add(information);
-        layout.Controls.Add(informationCard, 0, 1);
-        layout.Controls.Add(Surface("검사 기록 · 선택하면 오른쪽에 사진 표시", HistoryWithImage()), 0, 2);
-        layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "개수는 라인 누적값이며, 아래 표는 서버에서 조회한 개별 검사 기록입니다. 현재 최대 100건 조회합니다." }, 0, 3);
+        layout.Controls.Add(informationCard, 0, 0);
+        layout.Controls.Add(Surface("검사 기록 · 선택하면 오른쪽에 사진 표시", HistoryWithImage()), 0, 1);
+        layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text = "서버에 저장된 개별 검사 결과와 당시 제품 사진을 최대 100건 조회합니다.", ForeColor = UiMuted }, 0, 2);
         return layout;
     }
 
@@ -137,22 +297,25 @@ public sealed partial class UserMainForm : Form
         var list = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
         list.RowStyles.Add(new RowStyle(SizeType.Absolute, 46)); list.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var register = Button("새 문제 등록", async () => await RegisterIssueAsync()); register.Margin = new Padding(0, 0, 0, 8);
-        list.Controls.Add(register, 0, 0); list.Controls.Add(_issues, 0, 1);
+        list.Controls.Add(register, 0, 0); list.Controls.Add(GridWithDarkScrollBar(_issues), 0, 1);
         var listCard = Surface("문제 목록", list); listCard.Margin = new Padding(0, 0, 12, 0); layout.Controls.Add(listCard, 0, 0);
         var detail = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = Padding.Empty };
         detail.RowStyles.Add(new RowStyle(SizeType.Percent, 55)); detail.RowStyles.Add(new RowStyle(SizeType.Percent, 45)); detail.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         detail.Controls.Add(Surface("선택한 문제", _issueDetail), 0, 0);
         detail.Controls.Add(Surface("점검 및 처리 내용", _action), 0, 1);
-        var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0, 6, 0, 0), WrapContents = true };
+        var actions = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Padding = new Padding(0, 8, 0, 0), Margin = Padding.Empty };
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f)); actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f)); actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
         _acknowledge = IssueActionButton("문제 확인", IssueStatus.Acknowledged);
         _saveAction = IssueActionButton("점검 시작", IssueStatus.InProgress);
         _requestCompletion = IssueActionButton("완료 요청", IssueStatus.CompletionRequested);
-        actions.Controls.AddRange([_acknowledge, _saveAction, _requestCompletion]);
+        foreach (var button in new[] { _acknowledge, _saveAction, _requestCompletion }) { button.AutoSize = false; button.Dock = DockStyle.Fill; button.Margin = new Padding(0, 0, 8, 0); }
+        actions.Controls.Add(_acknowledge, 0, 0); actions.Controls.Add(_saveAction, 1, 0); actions.Controls.Add(_requestCompletion, 2, 0);
         detail.Controls.Add(actions, 0, 2);
-        var detailTabs = new TabControl { Dock = DockStyle.Fill };
+        var detailTabs = new DarkTabControl { Dock = DockStyle.Fill };
         var actionTab = new TabPage("점검·조치"); actionTab.Controls.Add(detail);
         var chatTab = new TabPage("관리자 채팅"); chatTab.Controls.Add(BuildIssueChatPanel());
-        detailTabs.TabPages.Add(actionTab); detailTabs.TabPages.Add(chatTab);
+        var groupTab = new TabPage("단체 채팅"); groupTab.Controls.Add(_groupChat);
+        detailTabs.TabPages.Add(actionTab); detailTabs.TabPages.Add(chatTab); detailTabs.TabPages.Add(groupTab);
         layout.Controls.Add(detailTabs, 1, 0);
         UpdateIssueActions(); return layout;
     }
@@ -176,6 +339,17 @@ public sealed partial class UserMainForm : Form
         layout.Controls.Add(composer, 0, 3); RenderAiChat();
         // AI 상담 탭을 열 때마다 서버 연결·AI 설정을 확인 (외부 AI를 시험 호출하지는 않음)
         _pages.SelectedIndexChanged += async (_, _) => { if (_pages.SelectedTab?.Controls.Contains(layout) == true) await _aiStatus.CheckConnectionAsync(); };
+        return layout;
+    }
+
+    private Control StatisticsPage()
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = Padding.Empty };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 130)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 108)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.Controls.Add(BuildMetricCards(), 0, 0);
+        _counts.Dock = DockStyle.Fill; _counts.Height = 0; _counts.TextAlign = ContentAlignment.MiddleLeft; _counts.ForeColor = UiInk; _counts.Padding = new Padding(0, 2, 0, 0);
+        layout.Controls.Add(Surface("누적 검사 요약", _counts), 0, 1);
+        layout.Controls.Add(Surface("운영 통계 안내", new Label { Dock = DockStyle.Fill, Text = "검사 결과와 불량률은 서버의 실제 라인 누적값을 기준으로 1초마다 갱신됩니다.\r\n개별 검사 기록과 제품 사진은 ‘검사 결과·사진’ 화면에서 확인할 수 있습니다.", ForeColor = UiMuted, Padding = new Padding(8) }), 0, 2);
         return layout;
     }
 
@@ -210,6 +384,9 @@ public sealed partial class UserMainForm : Form
             BindIssues(issues);
             var line = lines.First(x => x.Id == requestedLine);
             _lineName.Text = line.Name;
+            _topOperation.Text = line.OperationStatus.Contains("가동") ? "●  정상 가동" : $"●  {line.OperationStatus}";
+            _topOperation.ForeColor = line.OperationStatus.Contains("가동") ? IndustrialPalette.Green : IndustrialPalette.Amber;
+            _topCom.Text = _conveyor != null ? $"◇  {_conveyorPort.SelectedItem ?? "COM"} 연결" : "◇  COM 연결 확인";
             _lineInfo.Text = $"{line.Name} · {(line.IsReal ? "실제 라인" : "가상 라인")} · 가동: {line.OperationStatus} · 검사: {line.InspectionStatus}\r\n서버 기록 갱신: {line.UpdatedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
             if (line.IsReal) _lineInfo.Text += "\r\n" + HardwareStatusText.Format(line.Hardware);
             if (_conveyor == null)
@@ -220,6 +397,9 @@ public sealed partial class UserMainForm : Form
             var total = line.NormalCount + line.DefectCount;
             _counts.Text = $"정상 {line.NormalCount:N0}개     불량 {line.DefectCount:N0}개     판정 불가 {line.UndeterminedCount:N0}개     정상률 {(total == 0 ? 0 : line.NormalCount * 100.0 / total):0.0}%";
             UpdateMetricCards(line);
+            UpdateLiveHardware(line.Hardware);
+            _liveAlert.Text = issues.Count == 0 ? "●  미해결 문제 없음" : $"⚠  미해결 문제 {issues.Count:N0}건 · 문제 조치 화면에서 확인";
+            _liveAlert.ForeColor = issues.Count == 0 ? IndustrialPalette.Green : IndustrialPalette.Amber;
             var latest = inspections.FirstOrDefault();
             if (!_runningInspection && _camera == null && _recognizedVideo.Image == null)
             {
@@ -233,6 +413,19 @@ public sealed partial class UserMainForm : Form
         }
         catch (Exception ex) { await HandleServerFailureAsync(ex, "조회 실패"); if (showError && !IsDisposed && !SessionExpired) MessageBox.Show(this, ex.Message, "조회 오류"); }
         finally { _loading = false; if (!IsDisposed) _lines.Enabled = !_remoteExecuting; }
+    }
+
+    private void UpdateLiveHardware(LineHardwareStatusDto? hardware)
+    {
+        _liveHardwareValues[0].Text = hardware?.TemperatureCelsius is double t ? $"{t:0.0}℃" : "--";
+        _liveHardwareValues[1].Text = hardware?.HumidityPercent is double h ? $"{h:0.0}%" : "--";
+        _liveHardwareValues[2].Text = hardware?.GasAnalogValue?.ToString() ?? "--";
+        _liveHardwareValues[3].Text = hardware?.SorterAngle is int angle ? $"{angle}°" : "--";
+        var connected = hardware?.Connected == true;
+        _motorStatus.Text = !connected ? "●  미확인" : hardware!.BeltRunning ? "●  구동 중" : "●  정지";
+        _motorStatus.ForeColor = connected && hardware!.BeltRunning ? IndustrialPalette.Green : UiMuted;
+        _emergencyStatus.Text = !connected ? "●  미확인" : hardware!.EmergencyStopped ? "●  긴급 정지" : "●  정상";
+        _emergencyStatus.ForeColor = !connected ? UiMuted : hardware!.EmergencyStopped ? IndustrialPalette.Red : IndustrialPalette.Green;
     }
 
     private async Task RegisterIssueAsync()
@@ -370,9 +563,16 @@ public sealed partial class UserMainForm : Form
     private static Button Button(string text, Action action) { var b = new Button { Text = text, AutoSize = true, Height = 36, Padding = new Padding(8, 2, 8, 2) }; b.Click += (_, _) => action(); return b; }
     private static Button Button(string text, Func<Task> action) { var b = new Button { Text = text, AutoSize = true, Height = 36, Padding = new Padding(8, 2, 8, 2) }; b.Click += async (_, _) => { b.Enabled = false; try { await action(); } finally { if (!b.IsDisposed) b.Enabled = true; } }; return b; }
     private static ComboBox IssuePicker() => new() { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
-    private static RichTextBox Messages() => new() { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Color.White, Font = new Font("맑은 고딕", 11) };
-    private static TextBox ChatInput() => new() { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical, PlaceholderText = "메시지를 입력하세요." };
-    private static DataGridView Grid() => new() { Dock = DockStyle.Fill, ReadOnly = true, AutoGenerateColumns = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, AllowUserToAddRows = false, RowHeadersVisible = false, BackgroundColor = Color.White };
+    private static RichTextBox Messages() => new() { Dock = DockStyle.Fill, ReadOnly = true, BackColor = Color.White, Font = new Font("Noto Sans KR", 11) };
+    private static TextBox ChatInput() => new() { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.None, PlaceholderText = "메시지를 입력하세요." };
+    private static DataGridView Grid() => new() { Dock = DockStyle.Fill, ReadOnly = true, AutoGenerateColumns = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false, AllowUserToAddRows = false, RowHeadersVisible = false, ScrollBars = ScrollBars.None, BackgroundColor = IndustrialPalette.Surface };
+    private static Control GridWithDarkScrollBar(DataGridView grid)
+    {
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 14));
+        layout.Controls.Add(grid, 0, 0); layout.Controls.Add(new DarkGridScrollBar(grid) { Dock = DockStyle.Fill }, 1, 0);
+        return layout;
+    }
     private static string ResultText(InspectionResultType result) => result switch { InspectionResultType.Normal => "정상", InspectionResultType.Defect => "불량", _ => "판정 불가" };
     private static string StatusText(IssueStatus status) => status switch { IssueStatus.Occurred => "발생", IssueStatus.Acknowledged => "확인", IssueStatus.InProgress => "조치 중", IssueStatus.CompletionRequested => "완료 요청", IssueStatus.Closed => "종결", _ => status.ToString() };
     public sealed record ChatEntry(Guid IssueId, bool Admin, string Sender, string Text, DateTimeOffset Time);

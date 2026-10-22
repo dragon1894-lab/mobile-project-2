@@ -57,7 +57,9 @@ public sealed class SensorTrendPanel : Control
         var analogGas = current?.GasAnalogValue != null || _samples.LastOrDefault(s => s.Connected)?.GasAnalogValue != null;
         using var heading = new Font(Font.FontFamily, 10, FontStyle.Bold);
         TextRenderer.DrawText(g, "환경 센서 · 최근 10분", heading, new Rectangle(10,8,Width-20,24), ForeColor);
-        var sensorMode = analogGas ? current?.GasWarmingUp == true ? "A0 원시값 · 초기 예열 중" : "가스 A0 입력 (0~1023) · ppm 아님" : "실측값 · 가스는 DO 감지 신호";
+        var dhtMissing = fresh && current?.TemperatureCelsius == null && current?.HumidityPercent == null;
+        var sensorMode = dhtMissing ? "DHT11 D30 미응답 · DATA/VCC/GND 배선 확인"
+            : analogGas ? current?.GasWarmingUp == true ? "A0 원시값 · 초기 예열 중" : "가스 A0 입력 (0~1023) · ppm 아님" : "실측값 · 가스는 DO 감지 신호";
         TextRenderer.DrawText(g, fresh ? sensorMode : "센서 미연결 / 수신 지연 · 현재 값 미확인", Font,
             new Rectangle(10,32,Width-20,22), fresh ? MutedText : WarnText, TextFormatFlags.EndEllipsis);
         var row = Math.Max(58, (Height - 78) / 3);

@@ -3,7 +3,7 @@
 public sealed partial class UserMainForm
 {
     private IConveyorController? _conveyor;
-    private readonly ComboBox _conveyorPort = new() { Width = 90, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly DarkComboBox _conveyorPort = new() { Width = 104 };
     private readonly Button _conveyorConnect = new() { Text = "벨트 연결", AutoSize = true };
     private readonly Button _conveyorRun = new() { Text = "벨트 구동", AutoSize = true, Enabled = false };
     private readonly Label _lightState = new() { Text = "조명 자동 켜짐 · V5 이상(V7) 펌웨어가 설치된 아두이노에 USB 전원이 들어오면 켜집니다.", AutoSize = true, Padding = new Padding(0, 5, 0, 0) };
@@ -76,6 +76,8 @@ public sealed partial class UserMainForm
             _conveyor = controller;
             ArduinoPortSettings.Save(port);
             _conveyorRun.Enabled = true;
+            _topCom.Text = $"◇  {port} 연결";
+            _topCom.ForeColor = IndustrialPalette.Green;
             _conveyorState.Text = forLighting ? $"{port} 조명 제어 연결됨"
                 : $"{port} 연결됨 · 장치 상태 확인 완료.";
             _conveyorHeartbeat.Start();
@@ -92,6 +94,7 @@ public sealed partial class UserMainForm
 
     private async Task RunConveyorAsync()
     {
+        if (_conveyor == null && !_conveyorCommandBusy) { _conveyorState.Text = "벨트 미연결 · COM 포트를 고르고 [벨트 연결]을 먼저 누르세요."; return; }
         if (_conveyor == null || _conveyorCommandBusy || _arduinoSetupBusy) return;
         _conveyorCommandBusy = true;
         _conveyorRun.Enabled = false;
@@ -195,6 +198,8 @@ public sealed partial class UserMainForm
             if (!IsDisposed)
             {
                 _conveyorRun.Enabled = false;
+                _topCom.Text = "◇  COM 연결 확인";
+                _topCom.ForeColor = Color.FromArgb(118, 178, 235);
                 UpdateInspectionLightControls();
                 _conveyorConnect.Enabled = _conveyorPort.Enabled = true;
                 _conveyorState.Text = confirmed ? "벨트 정지 응답 확인 후 연결 해제" : "벨트 연결 해제 · 정지 응답 미확인 · 실제 상태를 확인하세요.";
@@ -209,6 +214,8 @@ public sealed partial class UserMainForm
         _conveyor = null;
         MarkHardwareDisconnected();
         _conveyorRun.Enabled = false;
+        _topCom.Text = "◇  COM 연결 확인";
+        _topCom.ForeColor = Color.FromArgb(118, 178, 235);
         UpdateInspectionLightControls();
         _conveyorConnect.Enabled = _conveyorPort.Enabled = true;
         _conveyorState.Text = message;

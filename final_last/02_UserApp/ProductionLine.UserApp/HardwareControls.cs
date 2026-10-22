@@ -69,6 +69,7 @@ public sealed partial class UserMainForm
             status.GasDetected, status.EmergencyStopped, status.BeltRunning, status.SorterAngle, status.Sorting, _latestHardwareAt, status.SpeedBoosted, status.GasAnalogValue, status.GasWarmingUp);
         _hardwareSummary.Text = HardwareStatusText.Format(dto);
         _sensorTrends.Append(dto);
+        UpdateLiveHardware(dto);
         _hardwareSummary.ForeColor = status.EmergencyStopped || status.GasDetected == true ? Color.Firebrick : UserTheme.Text;
     }
 
@@ -119,6 +120,7 @@ public sealed partial class UserMainForm
             _latestHardware = last with { Connected = false, BeltRunning = false, Sorting = false, SpeedBoosted = false };
             _sensorTrends.Append(new LineHardwareStatusDto(false, null, null, null, last.EmergencyStopped, false, last.SorterAngle, false, DateTimeOffset.UtcNow));
             _hardwareSummary.Text = "장비 통신 끊김 · 온습도·가스·분류 상태 미확인";
+            UpdateLiveHardware(null);
             // Server's 5-second expiry also covers a failed offline notification.
             if (!_hardwarePublishBusy) _ = PublishHardwareAsync(_latestHardware);
         }

@@ -20,6 +20,8 @@ const byte NORMAL_MOTION_RATE = 100, BOOST_MOTION_RATE = 200;
 const unsigned long BOOST_DURATION_MS = 3000;
 const unsigned long PC_TIMEOUT_MS = 3000;
 const unsigned long GAS_WARMUP_MS = 60000; // display unconfirmed during initial warmup
+const unsigned long CLIMATE_INTERVAL_MS = 2000;
+const byte CLIMATE_FAILURES_BEFORE_RESET = 3;
 Adafruit_NeoPixel inspectionLight(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 DHT climate(DHT_PIN, DHT11);
 Servo sorter;
@@ -29,6 +31,7 @@ volatile bool emergencyStopped = false;
 bool emergencyHandled = false;
 unsigned long lastPcMessage = 0, lastClimateRead = 0, switchClosedSince = 0;
 float temperatureCelsius = NAN, humidityPercent = NAN;
+byte climateReadFailures = 0;
 int sorterAngle = 0;
 bool sorting = false;
 volatile bool speedBoosted = false;
@@ -141,14 +144,36 @@ void setLight(bool enabled) {
   inspectionLight.show();
 }
 
+void refreshClimate() {
+  if ((unsigned long)(millis() - lastClimateRead) < CLIMATE_INTERVAL_MS) return;
+  lastClimateRead = millis();
+
+  // Perform one physical DHT11 transaction, then read temperature from the
+  // same cached packet. Keep the last valid sample when one read is disturbed
+  // by motor/servo noise instead of erasing the graph with null values.
+  float humidity = climate.readHumidity(true);
+  float temperature = climate.readTemperature(false);
+  if (!isnan(humidity) && !isnan(temperature)) {
+    humidityPercent = humidity;
+    temperatureCelsius = temperature;
+    climateReadFailures = 0;
+    return;
+  }
+
+  if (climateReadFailures < 255) ++climateReadFailures;
+  if (climateReadFailures >= CLIMATE_FAILURES_BEFORE_RESET) {
+    // Re-arm D30 after repeated timeouts. A persistent failure still means the
+    // DHT11 DATA/VCC/GND wiring or power must be checked.
+    climate.begin(65);
+    climateReadFailures = 0;
+  }
+}
+
 void printStatus() {
   // Read only after the complete STATUS packet is received, before its reply.
   // The PC serializes requests and waits for this reply. Background DHT reads
   // disable AVR interrupts and can drop incoming UART bytes mid-command.
-  if ((unsigned long)(millis() - lastClimateRead) >= 2000) {
-    lastClimateRead = millis();
-    humidityPercent = climate.readHumidity(); temperatureCelsius = climate.readTemperature();
-  }
+  refreshClimate();
   Serial.print("HW {\"connected\":true,\"temperatureCelsius\":");
   if (isnan(temperatureCelsius)) Serial.print("null"); else Serial.print(temperatureCelsius, 1);
   Serial.print(",\"humidityPercent\":");
@@ -306,7 +331,8 @@ void setup() {
   // NC contact opens on press or broken wire; D12 rises HIGH.
   PCMSK0 |= _BV(PCINT6); PCIFR |= _BV(PCIF0); PCICR |= _BV(PCIE0);
   if (!emergencyStopped) homeSorter();
-  climate.begin();
+  climate.begin(65);
+  lastClimateRead = millis() - CLIMATE_INTERVAL_MS;
   Serial.begin(9600);
   inspectionLight.begin(); inspectionLight.setBrightness(LED_BRIGHTNESS); setLight(true);
   lastPcMessage = millis();

@@ -11,7 +11,7 @@ public sealed class AiChatStatusPanel : UserControl
     private readonly Label _connection = new() { Dock = DockStyle.Fill, AutoEllipsis = true,
         TextAlign = ContentAlignment.MiddleLeft, Text = "서버 연결 확인 전 · AI 연결은 실제 응답 후 확인됩니다." };
     private readonly Label _reply = new() { Dock = DockStyle.Fill, AutoEllipsis = true,
-        TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.DimGray,
+        TextAlign = ContentAlignment.MiddleLeft, ForeColor = IndustrialPalette.Muted,
         Text = "응답 대기 · 질문을 입력하세요." };
     private readonly Button _check = new() { Text = "연결 확인", Dock = DockStyle.Fill };
     private readonly Button _devices = new() { Text = "장비 상태 확인", Dock = DockStyle.Fill };
@@ -29,15 +29,23 @@ public sealed class AiChatStatusPanel : UserControl
         ArgumentNullException.ThrowIfNull(currentLine);
         _api = api; _currentLine = currentLine;
         Dock = DockStyle.Top; Height = 104; MinimumSize = new Size(360, 104);
-        BackColor = Color.White; BorderStyle = BorderStyle.FixedSingle;
+        BackColor = IndustrialPalette.Surface; ForeColor = IndustrialPalette.Text; BorderStyle = BorderStyle.None;
         Padding = new Padding(18, 10, 12, 10);
-        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2 };
+        var grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, BackColor = IndustrialPalette.Surface, Margin = Padding.Empty };
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         grid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         grid.Controls.Add(_connection, 0, 0); grid.Controls.Add(_reply, 0, 1);
         grid.Controls.Add(_check, 1, 0); grid.Controls.Add(_devices, 1, 1);
+        foreach (var button in new[] { _check, _devices })
+        {
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderColor = IndustrialPalette.Border;
+            button.BackColor = IndustrialPalette.SurfaceRaised;
+            button.ForeColor = IndustrialPalette.Text;
+            button.Margin = new Padding(6, 3, 0, 3);
+        }
         Controls.Add(grid);
         _timer.Tick += (_, _) =>
         {
@@ -54,7 +62,7 @@ public sealed class AiChatStatusPanel : UserControl
         _checking = true; _check.Enabled = false;
         var revision = _revision;
         _connection.Text = "서버 연결과 AI 설정을 확인하는 중...";
-        _connection.ForeColor = Color.DimGray;
+        _connection.ForeColor = IndustrialPalette.Muted;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         timeout.CancelAfter(TimeSpan.FromSeconds(5));
         try
@@ -64,7 +72,7 @@ public sealed class AiChatStatusPanel : UserControl
             _connection.Text = status.AiConfigured
                 ? $"서버 연결됨 · {status.Provider} 설정됨 · 외부 AI 응답은 질문 전송 시 확인"
                 : "서버 연결됨 · 외부 AI 미설정/사용 중지 · 기본 매뉴얼 모드";
-            _connection.ForeColor = status.AiConfigured ? Accent : Color.DimGray;
+            _connection.ForeColor = status.AiConfigured ? Accent : IndustrialPalette.Muted;
         }
         catch (OperationCanceledException) when (Closed) { }
         catch (Exception ex)
@@ -95,7 +103,7 @@ public sealed class AiChatStatusPanel : UserControl
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, cancellationToken);
         _elapsed.Restart(); _timer.Start();
         _connection.Text = "서버로 질문 전송 중 · 응답 대기";
-        _connection.ForeColor = Color.DimGray;
+        _connection.ForeColor = IndustrialPalette.Muted;
         _reply.Text = "답변 작성 중 · 경과 0.0초";
         try
         {
@@ -111,7 +119,7 @@ public sealed class AiChatStatusPanel : UserControl
                 AiReplyKind.Fallback => "서버 연결됨 · 외부 AI 응답 미확인 · 기본 매뉴얼로 답변",
                 _ => "서버 연결됨 · 매뉴얼/안전 안내 응답 · 외부 AI 연결 미확인"
             };
-            _connection.ForeColor = state.Kind == AiReplyKind.Success ? Accent : Color.DimGray;
+            _connection.ForeColor = state.Kind == AiReplyKind.Success ? Accent : IndustrialPalette.Muted;
             _reply.Text = $"{state.Label} · 응답 시간 {_elapsed.Elapsed.TotalSeconds:F1}초 · {DateTime.Now:HH:mm:ss}";
             return response;
         }

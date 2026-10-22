@@ -7,14 +7,16 @@ namespace ProductionLine.UserApp;
 
 public sealed partial class UserMainForm
 {
-    private readonly SensorTrendPanel _sensorTrends = new() { Dock = DockStyle.Fill };
+    private readonly SensorTrendPanel _sensorTrends = new() { Dock = DockStyle.Fill, DarkMode = true };
     private readonly Label _remoteNotice = new() { Dock = DockStyle.Fill, AutoEllipsis = true, Text = "관리자 원격 연결 대기", Padding = new Padding(6) };
     private readonly System.Windows.Forms.Timer _remoteTimer = new() { Interval = 1000 };
     private readonly Guid _remoteClientId = Guid.NewGuid();
     private bool _remotePolling, _remoteExecuting, _remoteStopping;
     private int _remoteStopRevision;
     private DateTimeOffset? _remoteVideoAt;
-    private Control? _remoteControlArea;
+    // 원격 명령 실행 중에는 현장 조작 버튼만 잠급니다(화면 이동·채팅·상태 글자는 그대로).
+    private readonly List<Control> _remoteControlAreas = new();
+    private void SetRemoteControlsEnabled(bool enabled) { foreach (var area in _remoteControlAreas) area.Enabled = enabled; }
     private readonly Queue<(Guid Id, CompleteRemoteCommandRequest Result)> _remoteCompletions = new();
     private Dictionary<string,string> _remoteModels = new();
     private void StartRemoteWorker()
@@ -104,7 +106,7 @@ public sealed partial class UserMainForm
     {
         if (_remoteExecuting || command.ClientId != _remoteClientId) return;
         _remoteExecuting = true;
-        if (_remoteControlArea != null) _remoteControlArea.Enabled = false;
+        SetRemoteControlsEnabled(false);
         _lines.Enabled = false;
         var success = false; string message;
         _remoteNotice.Text = $"관리자 {command.Administrator} · {RemoteActionText.Name(command.Request.Action)} 실행 중";
@@ -120,7 +122,7 @@ public sealed partial class UserMainForm
         finally
         {
             _remoteExecuting = false;
-            if (!IsDisposed) { if (_remoteControlArea != null) _remoteControlArea.Enabled = !_remoteStopping; _lines.Enabled = !_loading && !_remoteStopping; }
+            if (!IsDisposed) { SetRemoteControlsEnabled(!_remoteStopping); _lines.Enabled = !_loading && !_remoteStopping; }
         }
         if (IsDisposed) return;
         _remoteNotice.Text = $"관리자 {command.Administrator} · {message}";
@@ -129,7 +131,7 @@ public sealed partial class UserMainForm
     private async Task ExecuteRemoteStopAsync(RemoteCommandDto command)
     {
         _remoteStopping = true; _remoteStopRevision++;
-        if (_remoteControlArea != null) _remoteControlArea.Enabled = false;
+        SetRemoteControlsEnabled(false);
         _lines.Enabled = false;
         var success = false; string message;
         try
@@ -144,7 +146,7 @@ public sealed partial class UserMainForm
         finally
         {
             _remoteStopping = false;
-            if (!IsDisposed) { if (_remoteControlArea != null) _remoteControlArea.Enabled = !_remoteExecuting; _lines.Enabled = !_loading && !_remoteExecuting; }
+            if (!IsDisposed) { SetRemoteControlsEnabled(!_remoteExecuting); _lines.Enabled = !_loading && !_remoteExecuting; }
         }
         if (!IsDisposed)
         {

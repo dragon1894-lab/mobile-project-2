@@ -6,7 +6,7 @@ namespace ProductionLine.UserApp;
 internal sealed class ArduinoSetupForm : Form
 {
     private readonly ArduinoFirmwareTools _tools;
-    private readonly ComboBox _ports = new() { Width = 110, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly DarkComboBox _ports = new() { Width = 120 };
     private readonly Button _refresh = new() { Text = "포트 확인", AutoSize = true };
     private readonly Button _prepare = new() { Text = "개발 도구 준비", AutoSize = true };
     private readonly Button _compile = new() { Text = "컴파일만 확인", AutoSize = true };
@@ -14,8 +14,8 @@ internal sealed class ArduinoSetupForm : Form
     private readonly Button _cancel = new() { Text = "작업 중단", AutoSize = true, Enabled = false };
     private readonly Button _close = new() { Text = "닫기", AutoSize = true };
     private readonly Label _status = new() { Dock = DockStyle.Fill, Text = "Mega 2560 · USB를 연결하고 COM 포트를 확인하세요.", AutoEllipsis = true };
-    private readonly RichTextBox _log = new() { Dock = DockStyle.Fill, ReadOnly = true, WordWrap = false, Font = new Font("Consolas", 9), BackColor = Color.White };
-    private readonly ProgressBar _progress = new() { Dock = DockStyle.Fill, Style = ProgressBarStyle.Blocks };
+    private readonly RichTextBox _log = new() { Dock = DockStyle.Fill, ReadOnly = true, WordWrap = false, Font = new Font("Consolas", 9), BorderStyle = BorderStyle.None, BackColor = Color.FromArgb(13, 23, 34), ForeColor = IndustrialPalette.Text };
+    private readonly DarkProgressBar _progress = new() { Dock = DockStyle.Fill, Style = ProgressBarStyle.Blocks };
     private CancellationTokenSource? _operation;
     private bool _busy;
     public string? UploadedPort { get; private set; }
@@ -26,8 +26,9 @@ internal sealed class ArduinoSetupForm : Form
         Text = "아두이노 설정·업로드 · Mega 2560";
         Size = new Size(820, 610); MinimumSize = new Size(700, 500);
         StartPosition = FormStartPosition.CenterParent;
-        Font = new Font("맑은 고딕", 10);
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 1, RowCount = 6 };
+        Font = new Font("Noto Sans KR", 10);
+        BackColor = IndustrialPalette.Canvas; ForeColor = IndustrialPalette.Text;
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 1, RowCount = 6, BackColor = IndustrialPalette.Canvas };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 116));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
@@ -46,6 +47,11 @@ internal sealed class ArduinoSetupForm : Form
         bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
         bottom.Controls.Add(_progress, 0, 0); bottom.Controls.Add(_close, 1, 0);
         layout.Controls.Add(bottom, 0, 5); Controls.Add(layout);
+        foreach (var button in new[] { _refresh, _prepare, _compile, _upload, _cancel, _close })
+        {
+            button.FlatStyle = FlatStyle.Flat; button.FlatAppearance.BorderColor = IndustrialPalette.Border;
+            button.BackColor = button == _upload ? Color.FromArgb(15, 124, 132) : IndustrialPalette.SurfaceRaised; button.ForeColor = IndustrialPalette.Text;
+        }
         _ports.SelectedIndexChanged += (_, _) => UpdateControls();
         _refresh.Click += async (_, _) => await PerformAsync(async token => await ReloadPortsAsync(_ports.SelectedItem as string, token));
         _prepare.Click += async (_, _) => await PerformAsync(async token =>
@@ -113,7 +119,9 @@ internal sealed class ArduinoSetupForm : Form
     private async Task ReloadPortsAsync(string? preferred, CancellationToken token)
     {
         var ports = SerialPort.GetPortNames().OrderBy(value => value).ToArray();
-        _ports.DataSource = ports;
+        // 어두운 목록 상자 안의 ComboBox는 창에 붙어 있지 않아 DataSource가 채워지지 않습니다. Items에 직접 넣습니다.
+        _ports.Items.Clear();
+        _ports.Items.AddRange(ports.Cast<object>().ToArray());
         _ports.SelectedIndex = -1; // Never silently choose COM1 or an unrelated device.
         if (preferred != null && ports.Contains(preferred)) _ports.SelectedItem = preferred;
         if (_tools.IsPrepared)

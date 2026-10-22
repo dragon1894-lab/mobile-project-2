@@ -4,17 +4,17 @@ namespace ProductionLine.UserApp;
 
 internal static class UserTheme
 {
-    public static readonly Color Navy = Color.FromArgb(17, 34, 52);
-    public static readonly Color Blue = Color.FromArgb(0, 119, 117);
-    public static readonly Color PaleBlue = Color.FromArgb(235, 243, 253);
-    public static readonly Color Surface = Color.White;
-    public static readonly Color Canvas = Color.FromArgb(244, 247, 251);
-    public static readonly Color Border = Color.FromArgb(218, 225, 234);
-    public static readonly Color Text = Color.FromArgb(34, 45, 60);
-    public static readonly Color Muted = Color.FromArgb(103, 116, 135);
-    public static readonly Color Green = Color.FromArgb(22, 145, 95);
-    public static readonly Color Red = Color.FromArgb(211, 69, 77);
-    public static readonly Color Amber = Color.FromArgb(221, 145, 27);
+    public static readonly Color Navy = Color.FromArgb(8, 15, 24);
+    public static readonly Color Blue = Color.FromArgb(15, 124, 132);
+    public static readonly Color PaleBlue = Color.FromArgb(22, 55, 67);
+    public static readonly Color Surface = Color.FromArgb(18, 29, 42);
+    public static readonly Color Canvas = Color.FromArgb(10, 17, 26);
+    public static readonly Color Border = Color.FromArgb(43, 61, 78);
+    public static readonly Color Text = Color.FromArgb(230, 238, 245);
+    public static readonly Color Muted = Color.FromArgb(142, 160, 177);
+    public static readonly Color Green = Color.FromArgb(50, 205, 132);
+    public static readonly Color Red = Color.FromArgb(243, 91, 103);
+    public static readonly Color Amber = Color.FromArgb(242, 176, 73);
 }
 
 public sealed class UserLoginForm : Form
@@ -37,7 +37,7 @@ public sealed class UserLoginForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(920, 560);
         MinimumSize = new Size(820, 520);
-        Font = new Font("맑은 고딕", 10);
+        Font = new Font("Noto Sans KR", 10);
         BackColor = UserTheme.Canvas;
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
@@ -69,7 +69,7 @@ public sealed class UserLoginForm : Form
         }, 0, 2);
         brand.Controls.Add(brandContent);
 
-        var loginArea = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
+        var loginArea = new Panel { Dock = DockStyle.Fill, BackColor = UserTheme.Canvas };
         var loginCard = new TableLayoutPanel
         {
             Width = 330,
@@ -77,7 +77,7 @@ public sealed class UserLoginForm : Form
             ColumnCount = 1,
             RowCount = 10,
             Anchor = AnchorStyles.None,
-            BackColor = Color.White
+            BackColor = UserTheme.Surface
         };
         loginCard.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         loginCard.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -171,7 +171,7 @@ public sealed class UserLoginForm : Form
         Dock = DockStyle.Fill,
         BorderStyle = BorderStyle.FixedSingle,
         UseSystemPasswordChar = password,
-        Font = new Font("맑은 고딕", 11),
+        Font = new Font("Noto Sans KR", 11),
         Margin = Padding.Empty
     };
 
@@ -181,7 +181,7 @@ public sealed class UserLoginForm : Form
         AutoSize = false,
         Dock = DockStyle.Fill,
         ForeColor = UserTheme.Text,
-        Font = new Font("맑은 고딕", 9, FontStyle.Bold),
+        Font = new Font("Noto Sans KR", 9, FontStyle.Bold),
         TextAlign = ContentAlignment.BottomLeft
     };
 
@@ -197,7 +197,7 @@ public sealed class UserLoginForm : Form
             ForeColor = foreColor,
             FlatStyle = FlatStyle.Flat,
             Cursor = Cursors.Hand,
-            Font = new Font("맑은 고딕", 9.5f, FontStyle.Bold),
+            Font = new Font("Noto Sans KR", 9.5f, FontStyle.Bold),
             Margin = Padding.Empty
         };
         button.FlatAppearance.BorderSize = 0;
@@ -285,7 +285,7 @@ internal sealed class IssueReportDialog : Form
         MinimizeBox = false;
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        Font = new Font("맑은 고딕", 9.5f);
+        Font = new Font("Noto Sans KR", 9.5f);
         BackColor = UserTheme.Canvas;
         Padding = new Padding(20);
         _type.Items.AddRange(["설비·라인 문제", "검사 시스템 문제"]);
@@ -337,7 +337,7 @@ internal sealed class IssueReportDialog : Form
         Dock = DockStyle.Fill,
         TextAlign = ContentAlignment.BottomLeft,
         ForeColor = UserTheme.Text,
-        Font = new Font("맑은 고딕", 9, FontStyle.Bold)
+        Font = new Font("Noto Sans KR", 9, FontStyle.Bold)
     };
 }
 

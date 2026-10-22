@@ -1,4 +1,4 @@
-﻿using ProductionLine.Shared;
+using ProductionLine.Shared;
 using ProductionLine.Vision;
 
 namespace ProductionLine.UserApp;
@@ -7,7 +7,7 @@ public sealed partial class UserMainForm
 {
     private ICameraFeed? _camera;
     private Task _cameraClosed = Task.CompletedTask;
-    private readonly NumericUpDown _cameraIndex = new() { Minimum = 0, Maximum = 9, Width = 55 };
+    private readonly DarkNumericUpDown _cameraIndex = new() { Minimum = 0, Maximum = 9, Width = 64 };
     private readonly Button _cameraConnect = new() { Text = "카메라 연결", AutoSize = true };
     private readonly Button _inspectionStart = new() { Text = "검사 시작", AutoSize = true };
     private readonly Label _inspectionState = new() { AutoSize = true, Text = "검사 대기 · 카메라 연결 후 YOLO 모델을 확인하세요.", Padding = new Padding(8) };
@@ -24,6 +24,7 @@ public sealed partial class UserMainForm
     private readonly PictureBox _recognizedVideo = new() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(20, 30, 42) };
     private readonly Label _recognizedCaption = new() { Dock = DockStyle.Fill, Text = "마지막 인식 제품 · 대기 중", AutoEllipsis = true };
     private int _recognizedProductNumber;
+    private bool _cameraControlsInitialized;
 
     private Control RecognitionVideoPanels()
     {
@@ -31,12 +32,12 @@ public sealed partial class UserMainForm
         panels.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64)); panels.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
         var camera = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = Padding.Empty };
         camera.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); camera.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
-        _videoStatus.Font = new Font("맑은 고딕", 8.5f); _videoStatus.ForeColor = UiMuted;
+        _videoStatus.Font = new Font("Noto Sans KR", 8.5f); _videoStatus.ForeColor = UiMuted;
         camera.Controls.Add(_video, 0, 0); camera.Controls.Add(_videoStatus, 0, 1);
         var live = Surface("실시간 카메라", camera); live.Margin = new Padding(0, 0, 10, 10); panels.Controls.Add(live, 0, 0);
         var product = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = Padding.Empty };
         product.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); product.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-        _recognizedCaption.Font = new Font("맑은 고딕", 9); _recognizedCaption.ForeColor = UiMuted;
+        _recognizedCaption.Font = new Font("Noto Sans KR", 9); _recognizedCaption.ForeColor = UiMuted;
         product.Controls.Add(_recognizedVideo, 0, 0); product.Controls.Add(_recognizedCaption, 0, 1);
         var latest = Surface("최근 인식 제품", product); latest.Margin = new Padding(0, 0, 10, 10); panels.Controls.Add(latest, 1, 0); return panels;
     }
@@ -51,30 +52,90 @@ public sealed partial class UserMainForm
         _result.ForeColor = UserTheme.Text;
     }
 
-    private Control CameraControls()
+    private void InitializeCameraControls()
     {
+        if (_cameraControlsInitialized) return;
+        _cameraControlsInitialized = true;
         InitializeConveyorControls();
-        var container = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 8, ColumnCount = 1, Margin = Padding.Empty };
-        foreach (var height in new[] { 36, 36, 36, 24, 34, 34, 36, 24 }) container.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        _cameraConnect.Click += (_, _) => ConnectCamera();
+        _inspectionStart.Click += async (_, _) => await StartInspectionAsync();
+        _inspectionTimer.Tick += async (_, _) => await InspectCameraAsync();
+    }
+
+    private Control BuildCameraOperationControls()
+    {
+        InitializeCameraControls();
+        var container = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Margin = Padding.Empty };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
         buttons.Controls.Add(new Label { Text = "카메라", AutoSize = true, Padding = new Padding(0, 8, 2, 0) });
         buttons.Controls.Add(_cameraIndex); buttons.Controls.Add(_cameraConnect); buttons.Controls.Add(Button("연결 해제", DisconnectCamera));
         buttons.Controls.Add(_inspectionStart); buttons.Controls.Add(Button("검사 중지", () => StopInspection("검사 중지 · 전송 중인 1건은 완료될 수 있습니다.")));
+        container.Controls.Add(buttons, 0, 0);
+        _inspectionState.Font = new Font("Noto Sans KR", 9); _inspectionState.ForeColor = UiMuted; _inspectionState.Dock = DockStyle.Fill;
+        container.Controls.Add(_inspectionState, 0, 1);
+        return container;
+    }
+
+    private Control BuildLiveOperationControls()
+    {
+        InitializeCameraControls();
+        var row = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = Padding.Empty, Padding = new Padding(6, 6, 0, 0) };
+        row.Controls.Add(new Label { Text = "카메라", AutoSize = true, ForeColor = UiMuted, Padding = new Padding(0, 8, 2, 0) });
+        row.Controls.Add(_cameraIndex); row.Controls.Add(_cameraConnect); row.Controls.Add(Button("연결 해제", DisconnectCamera));
+        row.Controls.Add(_inspectionStart); row.Controls.Add(Button("검사 중지", () => StopInspection("검사 중지 · 전송 중인 1건은 완료될 수 있습니다.")));
+        // 벨트 구동은 기존처럼 벨트 연결 전에는 눌리지 않는 버튼을 씁니다.
+        _conveyorRun.Text = "벨트 구동"; row.Controls.Add(_conveyorRun);
+        row.Controls.Add(Button("벨트 정지", async () => await StopConveyorAsync("벨트 정지 응답 확인")));
+        _remoteControlAreas.Add(row);
+        // 검사 상태(모델 준비·검사 시작 실패 이유)와 관리자 원격 알림 글자를 다시 표시합니다.
+        var statuses = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
+        statuses.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65)); statuses.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+        foreach (var label in new[] { _inspectionState, _remoteNotice })
+        {
+            label.AutoSize = false; label.Dock = DockStyle.Fill; label.AutoEllipsis = true; label.Padding = new Padding(8, 0, 4, 0);
+            label.TextAlign = ContentAlignment.MiddleLeft; label.Font = new Font("Noto Sans KR", 9); label.ForeColor = UiMuted;
+        }
+        statuses.Controls.Add(_inspectionState, 0, 0); statuses.Controls.Add(_remoteNotice, 1, 0);
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.Controls.Add(row, 0, 0); layout.Controls.Add(statuses, 0, 1);
+        return layout;
+    }
+
+    private Control BuildYoloSettingsControls()
+    {
+        InitializeCameraControls();
+        var container = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = Padding.Empty, Padding = new Padding(8) };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 48)); container.RowStyles.Add(new RowStyle(SizeType.Absolute, 72)); container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var models = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
         models.Controls.Add(Button("모델 확인", CheckYoloModel));
-        models.Controls.Add(Button("모델 선택", SelectYoloModel)); models.Controls.Add(_arduinoSetup);
-        container.Controls.Add(buttons, 0, 0); container.Controls.Add(models, 0, 1);
+        models.Controls.Add(Button("모델 선택", SelectYoloModel));
+        container.Controls.Add(models, 0, 0); _remoteControlAreas.Add(models);
+        container.Controls.Add(new Label { Dock = DockStyle.Fill, ForeColor = UiMuted, Text = "현재 검사 모델의 경로와 ONNX 입력 형식을 확인하거나 다른 모델을 선택합니다.\r\n검사 중에는 모델을 변경하지 않습니다." }, 0, 1);
+        container.Controls.Add(new Label { Dock = DockStyle.Fill, ForeColor = UiMuted, Text = "검사 주기 100 ms · 휴대폰 검출 신뢰도 기준 45%\r\n결과는 서버 검사 이력과 제품 사진에 자동 저장됩니다." }, 0, 2);
+        return container;
+    }
+
+    private Control BuildEquipmentControls()
+    {
+        InitializeCameraControls();
+        var container = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 7, ColumnCount = 1, Margin = Padding.Empty };
+        foreach (var height in new[] { 38, 38, 32, 36, 36, 40, 32 }) container.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+        var setup = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
+        setup.Controls.Add(_arduinoSetup);
+        setup.Controls.Add(new Label { Text = "Mega 2560 V7 펌웨어 · 센서/조명/벨트/분류 통합", AutoSize = true, Padding = new Padding(6, 8, 0, 0), ForeColor = UiMuted });
+        container.Controls.Add(setup, 0, 0);
         container.Controls.Add(BuildConveyorControls(), 0, 2);
         _conveyorState.Dock = DockStyle.Fill;
         _conveyorState.AutoSize = false;
         _conveyorState.AutoEllipsis = true;
-        container.Controls.Add(_conveyorState, 0, 3);
-        container.Controls.Add(BuildInspectionLightControls(), 0, 4); container.Controls.Add(BuildBoostControls(), 0, 5);
-        container.Controls.Add(BuildSortingControls(), 0, 6);
-        _inspectionState.Font = new Font("맑은 고딕", 9); _inspectionState.ForeColor = UiMuted;
-        container.Controls.Add(_inspectionState, 0, 7);
-        _cameraConnect.Click += (_, _) => ConnectCamera(); _inspectionStart.Click += async (_, _) => await StartInspectionAsync();
-        _inspectionTimer.Tick += async (_, _) => await InspectCameraAsync(); return container;
+        container.Controls.Add(_conveyorState, 0, 1);
+        container.Controls.Add(BuildInspectionLightControls(), 0, 3); container.Controls.Add(BuildBoostControls(), 0, 4);
+        container.Controls.Add(BuildSortingControls(), 0, 5);
+        container.Controls.Add(new Label { Dock = DockStyle.Fill, ForeColor = UiMuted, Text = "긴급정지 해제 후에는 안전을 확인하고 벨트 구동을 다시 눌러야 합니다." }, 0, 6);
+        return container;
     }
 
     private void ConnectCamera()
