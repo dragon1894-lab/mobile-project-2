@@ -32,7 +32,7 @@ public sealed class LineReportService
         Row(Text($"{lineId}번 라인 - 생산 검사 보고서"));
         Row("검사 기간", $"{Local(from):yyyy-MM-dd HH:mm} ~ {Local(to):yyyy-MM-dd HH:mm}");
         Row("작성자", Text(author));
-        Row("작성 시각", $"{Local(now):yyyy-MM-dd HH:mm}");
+        Row("작성 시각", Time(now, "yyyy-MM-dd HH:mm"));
         Row();
 
         // ===== 1. 검사 요약 =====
@@ -92,7 +92,7 @@ public sealed class LineReportService
         Row("[5. 검사 이력]");
         Row("검사 시각", "판정", "기종", "신뢰도(%)");
         foreach (var x in inspections)
-            Row($"{Local(x.InspectedAt):yyyy-MM-dd HH:mm:ss}", ResultText(x.Result), Text(x.PhoneModel ?? ""),
+            Row(Time(x.InspectedAt), ResultText(x.Result), Text(x.PhoneModel ?? ""),
                 x.DetectionConfidence is double d ? (d * 100).ToString("0", CultureInfo.InvariantCulture) : "");
         Row();
 
@@ -141,7 +141,10 @@ public sealed class LineReportService
 
     private static DateTime BucketStart(DateTime local) => new(local.Ticks - local.Ticks % SensorBucket.Ticks, local.Kind);
     private static DateTime Local(DateTimeOffset value) => value.ToLocalTime().DateTime;
-    private static string Time(DateTimeOffset value) => $"{Local(value):yyyy-MM-dd HH:mm:ss}";
+    // 시각 칸: 그냥 쓰면 한셀·엑셀이 날짜 숫자로 바꿔서 칸이 좁을 때 ####으로 보이고 초·24시간 표기가 사라집니다.
+    // ="..." 로 감싸면 적은 글자 그대로 보입니다. (2026-10-23, 한셀에서 확인)
+    private static string Time(DateTimeOffset value, string format = "yyyy-MM-dd HH:mm:ss") =>
+        $"=\"{Local(value).ToString(format, CultureInfo.InvariantCulture)}\"";
     private static string N(int value) => value.ToString(CultureInfo.InvariantCulture);
     private static string Rate(int part, int total) => total == 0 ? "-" : (part * 100.0 / total).ToString("0.0", CultureInfo.InvariantCulture);
 

@@ -117,6 +117,7 @@ final_last/
 | 공도현 AI 연동: 장비 진단을 보고 답함, `/api/ai/chat`·상태·진단 창구 (자유 상담 `/api/ai/consult`는 유지) | 05_AiAssistant, 서버 Infrastructure 3개, Shared 2개 |
 | 가스 센서 **MQ-9 통일** (매뉴얼 MQ-2→MQ-9, D8 DO→A0 AO), 진단이 MQ-9 A0 값을 읽음 | `Manuals.json`, `DeviceDiagnosticsService.cs` |
 | 정리 문서 | `md파일/` (발표용 기능 정리, 담당자별 전달 목록, 보고서 예시) |
+| **보고서 CSV 시각 칸 글자 그대로 표시**: 한셀·엑셀이 시각을 날짜 숫자로 바꿔 `####`·오전/오후로 보이던 문제 → `="2026-10-22 16:37:22"` 형식으로 저장 (한셀에서 확인). 칸 너비는 CSV에 저장할 수 없어 좁으면 잘려 보임 → 열 경계 더블클릭 | `LineReportService.cs` |
 | **작업자 AI 상담 상단 상태 영역** (공도현 `AI채팅_상단상태_버튼_추가병합` 패키지): 서버·AI 연결, 응답 결과·시간, [연결 확인]·[장비 상태 확인]. 질문은 기존 자유 상담(`/api/ai/consult`) 그대로 | `AiChatStatusPanel.cs`, `DeviceDiagnosticsForm.cs`, `AiConsultationApi.cs`, `AiReplyStatus.cs`, `UserMainForm.cs` |
 
 ## 5. DB (SQLite, EF Core 마이그레이션 자동 적용)
