@@ -344,7 +344,9 @@ public sealed partial class UserMainForm
             _result.Text = recognizedResult + "\r\n서버 기록 저장 중";
             _result.ForeColor = analysis.Result == InspectionResultType.Defect ? UserTheme.Red : UserTheme.Text;
 
-            await HandleRecognizedConveyorAsync(frame.ReceivedUtc, analysis.Result);
+            // 분류 명령(시간이 중요)을 먼저 보내고, 그다음 판정 표시등(빨강·초록)을 켭니다.
+            try { await HandleRecognizedConveyorAsync(frame.ReceivedUtc, analysis.Result); }
+            finally { await ShowResultLampAsync(analysis.Result); }
 
             // 기종은 DB에도 남기고, 제품 1대마다 요청 번호를 붙여 같은 기록이 두 번 저장되지 않게 함 (김하균)
             var saved = await _api.SaveCameraInspectionAsync(new CameraInspectionRequest(line, analysis.Result, analysis.Reason,

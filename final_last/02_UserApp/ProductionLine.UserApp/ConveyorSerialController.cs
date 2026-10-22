@@ -122,6 +122,15 @@ internal sealed class ConveyorSerialController(IConveyorTransport transport) : I
             });
     }
     public Task ResetEmergencyAsync() => SendAsync("RESET_ESTOP", reply => reply == "ESTOP_RESET");
+    /// <summary>YOLO 판정 표시등: 불량이면 빨강(D40), 정상이면 초록(D42). 이 명령이 없는 옛 펌웨어면 다음부터 보내지 않습니다.</summary>
+    public bool ResultLampUnsupported { get; private set; }
+    public async Task SetResultLampAsync(bool defect)
+    {
+        if (ResultLampUnsupported) return;
+        var command = defect ? "RESULT 1" : "RESULT 0";
+        try { await SendAsync(command, reply => reply == command); }
+        catch (IOException ex) when (ex.Message.Contains("UNKNOWN_COMMAND")) { ResultLampUnsupported = true; }
+    }
     public Task RecognizeAsync(Guid productId, DateTime capturedUtc, int travelMs, int holdMs, bool sort, int boostMs = 3000)
     {
         if (!SupportsRecognitionBoost) throw new InvalidOperationException("인식 후 가속에는 V6 코드 업로드가 필요합니다.");

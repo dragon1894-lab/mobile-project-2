@@ -11,7 +11,7 @@ public sealed partial class UserMainForm
     private DateTimeOffset _latestHardwareAt;
     private bool _hardwarePublishBusy;
     private DateTimeOffset _lastHardwarePublish;
-    private readonly NumericUpDown _boostSeconds = new() { Minimum = 0.5m, Maximum = 60, DecimalPlaces = 1, Increment = 0.5m, Value = 3, Width = 80 };
+    private readonly NumericUpDown _boostSeconds = new() { Minimum = 0.5m, Maximum = 60, DecimalPlaces = 1, Increment = 0.5m, Value = 18, Width = 80 };
     private readonly CheckBox _automaticSort = new() { Text = "불량 자동 분류", AutoSize = true };
     private readonly NumericUpDown _sortTravelMs = new() { Minimum = 500, Maximum = 60000, Value = FixedSortTravelMs, Width = 76 };
     private readonly NumericUpDown _sortHoldMs = new() { Minimum = 200, Maximum = 60000, Value = FixedSortHoldMs, Width = 76 };
@@ -125,6 +125,15 @@ public sealed partial class UserMainForm
             if (!_hardwarePublishBusy) _ = PublishHardwareAsync(_latestHardware);
         }
     }
+    // 판정 표시등은 보조 표시라서 실패해도 검사·분류·기록 저장을 막지 않습니다.
+    private async Task ShowResultLampAsync(InspectionResultType result)
+    {
+        if (result is not (InspectionResultType.Normal or InspectionResultType.Defect)) return;
+        if (_conveyor is not ConveyorSerialController serial || !serial.SupportsHardware) return;
+        try { await serial.SetResultLampAsync(result == InspectionResultType.Defect); }
+        catch (Exception) { }
+    }
+
     private async Task HandleRecognizedConveyorAsync(DateTime capturedUtc, InspectionResultType result)
     {
         var shouldSort = _automaticSort.Checked && result == InspectionResultType.Defect;
