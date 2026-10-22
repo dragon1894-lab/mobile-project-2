@@ -2,7 +2,7 @@
 
 > **이 문서를 받은 Claude에게:** 최종 학습 모델은 **`training_model/v5_merged_default/v5_merged_default.onnx`** 입니다.
 > v4에서 **클래스 이름이 바뀌었고 불량이 2개 클래스로 나뉘었습니다.** 지금 앱 코드(`04_Vision/ProductionLine.Vision/YoloOnnxInspector.cs`)는 `crack_iphone`이라는 이름으로 불량을 찾기 때문에, **코드를 먼저 고치지 않고 v5를 넣으면 깨진 폰이 정상으로 판정됩니다.** 아래 "2. 앱 고치기"를 먼저 하세요.
-> 성능 그래프와 지표는 `training_model/data_set/`에 있습니다.
+> 성능 그래프는 `training_model/data_set/`(그래프 3개, `v5_성능그래프.zip`으로 한 번에 받기), 학습 기록 원본은 `training_model/v5_merged_default/training_record/`에 있습니다.
 
 ## 1. 무엇이 바뀌었나 (v4 → v5)
 
@@ -87,7 +87,7 @@ if (defect != null)
 | **전체 판정** | **153/155** | **153/155** |
 | 검증 P / R / mAP50 / mAP50-95 | 0.989 / 0.968 / 0.980 / 0.837 | **0.993 / 0.993 / 0.991 / 0.861** |
 
-- 클래스별 검증 mAP50-95: 12 Pro Max 깨짐 0.869, 16 화이트 0.873, 12 Pro 실버 0.778, 15 Pro 0.887, 14 화이트 0.861, 8 깨짐 0.873 (`data_set/v5_metrics_summary.json`).
+- 클래스별 검증 mAP50-95: 12 Pro Max 깨짐 0.869, 16 화이트 0.873, 12 Pro 실버 0.778, 15 Pro 0.887, 14 화이트 0.861, 8 깨짐 0.873 (`v5_merged_default/training_record/v5_metrics_summary.json`).
 - ⚠️ 컨베이어 시험 사진은 학습 사진과 같은 날·같은 환경 촬영이라 점수가 낙관적입니다. 실물 시험이 최종 기준입니다.
 
 ## 5. 다시 만들기
