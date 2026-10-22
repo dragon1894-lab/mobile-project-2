@@ -14,13 +14,16 @@
 6. 시연용 기본 계정: `admin` / `admin123!`, `worker1` / `worker123!` (README와 같음)
 7. DB 파일은 처음 서버를 켤 때 `03_Server/ProductionLine.Server/App_Data/productionline.db`로 새로 만들어집니다(마이그레이션 자동 적용).
 
-## 1. ★ 꼭 할 일: Gemini(AI) 키 연결 — 이 컨베이어 PC(서버 PC)에서
+## 1. ★ 꼭 할 일: Gemini(AI) 키 연결 — 관리자 PC(서버 켜는 PC)에서만
 
-AI 상담을 실제 Gemini로 쓰려면 **서버를 켜는 이 PC에서 키를 한 번 저장**해야 합니다. 노트북에 저장한 키는 옮겨지지 않습니다.
+AI 상담을 실제 Gemini로 쓰려면 **관리자 앱으로 [서버 켜고 접속]을 누르는 PC(= 서버 PC)에서 키를 한 번 저장**해야 합니다. 노트북에 저장한 키는 옮겨지지 않습니다.
+- 관리자 PC와 컨베이어(작업자) PC가 다른 컴퓨터라면, **관리자 PC에만** 저장합니다. 작업자 PC에는 저장하지 않습니다.
+- 서버를 켤 때 쓰는 **같은 Windows 계정**으로 저장해야 합니다(키가 계정별로 저장됨).
+- 나중에 서버를 다른 PC에서 켜게 되면, 그 PC에서 한 번 더 저장합니다.
 
-1. `scripts\set-gemini-key.cmd` 실행 → 창이 뜨면 **김하균님이 직접 키 입력** (Claude는 키를 묻거나 파일·대화에 적지 않음)
-   - 키는 `%LOCALAPPDATA%\ProductionLine\gemini-key.dpapi`에 **이 PC·이 Windows 계정 전용으로 암호화** 저장
-2. 서버를 다시 켜면 자동으로 키를 읽어 Gemini 연결 (코드는 이미 `Gemini:Enabled=true`, `UseSavedKey=true`)
+1. 관리자 PC에서 `scripts\set-gemini-key.cmd` 실행 → 창이 뜨면 **김하균님이 직접 키 입력** (Claude는 키를 묻거나 파일·대화에 적지 않음)
+   - 키는 `%LOCALAPPDATA%\ProductionLine\gemini-key.dpapi`에 **관리자 PC·그 Windows 계정 전용으로 암호화** 저장
+2. 관리자 앱에서 서버를 다시 켜면 자동으로 키를 읽어 Gemini 연결 (코드는 이미 `Gemini:Enabled=true`, `UseSavedKey=true`)
 3. 확인: 로그인 후 `GET /api/ai/chat/status` → `aiConfigured: true`, 그리고 작업자 앱 AI 상담에서 실제 질문 1~2개 → 서버 창/`ai-events.jsonl`에 `gemini_success`가 남는지
    - `aiConfigured=true`는 "설정됨"일 뿐, 실제 응답 성공은 질문해서 확인
 4. 알아둘 것
@@ -133,9 +136,9 @@ final_last/
 | 회전판 시뮬레이션 (RemoteVerification `--simulation`) | 45 통과 (노트북 175% 배율의 최소 창 크기 1개만 실패, 원본도 동일) |
 | v5 사진 시험 | 정상 3종·빈 벨트·검은 화면 맞음 / 다른 기종 깨진 폰 사진은 정상으로 나옴(모델 한계) |
 
-## 7. 남은 일 (컨베이어 PC에서)
+## 7. 남은 일 (컨베이어 PC·관리자 PC에서)
 
-1. **Gemini 키 저장** (1번 항목)
+1. **Gemini 키 저장 — 관리자 PC(서버 켜는 PC)에서만** (1번 항목)
 2. **실물 시험**: 깨진 8·12 Pro Max → 불량 + 이름(`iphone8_crack`, `iphone12_promax_crack`) + 서보 분류, 정상 4종 → 기종 이름, 빈 벨트 → 검출 없음
 3. 센서 기록이 쌓이는지, 관리자 앱 종료 시 보고서 CSV가 실제 데이터로 나오는지
 4. 결과를 기록하고 GitHub에 올리기 (김하균님 허락 후)
