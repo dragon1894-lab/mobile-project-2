@@ -1,0 +1,47 @@
+
+######## v4_merged_default  classes=['crack', 'iphone16_white', 'iphone12_pro_silver', 'iphone15_pro_Natural_Titanium', 'iphone14_white']
+  컨베이어 empty_belt                          판정   6/6   이름정확   6/6   평균신뢰도 0.00  결과 {'none': 6}
+  컨베이어 iphone12_pro_silver                 판정   8/8   이름정확   8/8   평균신뢰도 0.93  결과 {'iphone12_pro_silver': 8}
+  컨베이어 iphone12_promax_crack               판정  10/10  이름정확   -/10  평균신뢰도 0.94  결과 {'crack': 10}
+  컨베이어 iphone14_white                      판정  10/10  이름정확  10/10  평균신뢰도 0.93  결과 {'iphone14_white': 10}
+  컨베이어 iphone15_pro_Natural_Titanium       판정  25/25  이름정확  25/25  평균신뢰도 0.94  결과 {'iphone15_pro_Natural_Titanium': 25}
+  컨베이어 iphone16_white                      판정  20/20  이름정확  20/20  평균신뢰도 0.93  결과 {'iphone16_white': 20}
+  컨베이어 iphone8_crack                       판정  10/10  이름정확   -/10  평균신뢰도 0.93  결과 {'crack': 10}
+  예전 보류 iphone12_pro_silver                판정  33/33  이름정확  33/33  평균신뢰도 0.86  결과 {'iphone12_pro_silver': 33}
+  예전 보류 iphone12_promax_crack              판정   8/8   이름정확   -/8   평균신뢰도 0.90  결과 {'crack': 8}
+  예전 보류 iphone14_white                     판정  12/12  이름정확  12/12  평균신뢰도 0.88  결과 {'iphone14_white': 12}
+  예전 보류 iphone16_white                     판정   6/7   이름정확   6/7   평균신뢰도 0.92  결과 {'iphone16_white': 6, 'crack': 1}
+  우드락 전 컨베이어 (기종 기록된 6장)                   판정   5/6   이름정확   5/6   평균신뢰도 0.84  결과 {'iphone15_pro_Natural_Titanium': 4, 'iphone16_white': 1, 'iphone12_pro_silver': 1}
+  우드락 전 컨베이어 8장 정상→불량 오판: 1/8 | 검은 화면 -> none
+
+######## v5_merged_default  classes=['iphone12_promax_crack', 'iphone16_white', 'iphone12_pro_silver', 'iphone15_pro_Natural_Titanium', 'iphone14_white', 'iphone8_crack']
+  컨베이어 empty_belt                          판정   6/6   이름정확   6/6   평균신뢰도 0.00  결과 {'none': 6}
+  컨베이어 iphone12_pro_silver                 판정   8/8   이름정확   8/8   평균신뢰도 0.93  결과 {'iphone12_pro_silver': 8}
+  컨베이어 iphone12_promax_crack               판정  10/10  이름정확  10/10  평균신뢰도 0.94  결과 {'iphone12_promax_crack': 10}
+  컨베이어 iphone14_white                      판정  10/10  이름정확  10/10  평균신뢰도 0.94  결과 {'iphone14_white': 10}
+  컨베이어 iphone15_pro_Natural_Titanium       판정  25/25  이름정확  25/25  평균신뢰도 0.94  결과 {'iphone15_pro_Natural_Titanium': 25}
+  컨베이어 iphone16_white                      판정  20/20  이름정확  20/20  평균신뢰도 0.94  결과 {'iphone16_white': 20}
+  컨베이어 iphone8_crack                       판정  10/10  이름정확  10/10  평균신뢰도 0.94  결과 {'iphone8_crack': 10}
+  예전 보류 iphone12_pro_silver                판정  33/33  이름정확  33/33  평균신뢰도 0.87  결과 {'iphone12_pro_silver': 33}
+  예전 보류 iphone12_promax_crack              판정   8/8   이름정확   8/8   평균신뢰도 0.90  결과 {'iphone12_promax_crack': 8}
+  예전 보류 iphone14_white                     판정  12/12  이름정확  12/12  평균신뢰도 0.90  결과 {'iphone14_white': 12}
+  예전 보류 iphone16_white                     판정   7/7   이름정확   7/7   평균신뢰도 0.94  결과 {'iphone16_white': 7}
+  우드락 전 컨베이어 (기종 기록된 6장)                   판정   4/6   이름정확   4/6   평균신뢰도 0.91  결과 {'iphone15_pro_Natural_Titanium': 6}
+  우드락 전 컨베이어 8장 정상→불량 오판: 0/8 | 검은 화면 -> none
+
+######## 요약 (판정 맞음 / 이름 정확)
+  컨베이어 empty_belt                          v4: 6/6 (6)          v5: 6/6 (6)       
+  컨베이어 iphone12_pro_silver                 v4: 8/8 (8)          v5: 8/8 (8)       
+  컨베이어 iphone12_promax_crack               v4: 10/10 (-)        v5: 10/10 (10)    
+  컨베이어 iphone14_white                      v4: 10/10 (10)       v5: 10/10 (10)    
+  컨베이어 iphone15_pro_Natural_Titanium       v4: 25/25 (25)       v5: 25/25 (25)    
+  컨베이어 iphone16_white                      v4: 20/20 (20)       v5: 20/20 (20)    
+  컨베이어 iphone8_crack                       v4: 10/10 (-)        v5: 10/10 (10)    
+  예전 보류 iphone12_pro_silver                v4: 33/33 (33)       v5: 33/33 (33)    
+  예전 보류 iphone12_promax_crack              v4: 8/8 (-)          v5: 8/8 (8)       
+  예전 보류 iphone14_white                     v4: 12/12 (12)       v5: 12/12 (12)    
+  예전 보류 iphone16_white                     v4: 6/7 (6)          v5: 7/7 (7)       
+  우드락 전 컨베이어 (기종 기록된 6장)                   v4: 5/6 (5)          v5: 4/6 (4)       
+  전체 판정: v4_merged_default: 153/155   v5_merged_default: 153/155
+
+######## v5 on the 230 removed cracked-phone photos (other phones, not trained): defect 158/230 = 69%, normal 52 (15 Pro 42, 16 white 8, 14 white 2), none 20

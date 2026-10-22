@@ -1,4 +1,4 @@
-# v4_merged_default — 지금 쓰는 통합 모델 (2026-10-21 오후, 학습 PC)
+# v4_merged_default — 통합 모델 (v5로 교체됨, 되돌리기용) (2026-10-21 오후, 학습 PC)
 
 - 파일: `v4_merged_default.onnx`(앱용), `v4_merged_default.pt`, `classes.txt` — `all_phones/models/best.onnx`·`best.pt`와 같은 파일
 - SHA256 (`v4_merged_default.onnx` = `all_phones/models/best.onnx`): `55ac3efd6fc19d86a1c86b23b7218bd1314216df9d90eb17be19979cf7c87cfd`

@@ -514,3 +514,13 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
   2. `final/ProductionLine_final_20261021.zip` 안 `ProductionLine_final/README.md`만 교체: 저장은 SQLite DB(단체 채팅만 JSON, 사진은 파일), 기본 흐름에 관리자 채팅·단체 채팅·AI 자유 상담·전체 정지 반영, "다른 PC에서 연결"을 연결 창·자동 찾기(UDP 5051)·짧은 경로 주의로 바꿈. 압축의 다른 258개 파일은 그대로.
 - 검증: 이 압축을 김하균 PC에 풀어 빌드 경고 0·오류 0, RemoteVerification 143개 통과, 하드웨어 11·컨베이어 25·연속 검사 49(1400×900 배치 1개 실패, 기존과 같음)·이력 스크롤·문제 목록 통과, `--modern-ui`는 기존과 같은 실패. 서버 실행 후 admin·worker1 로그인, 라인·문제·단체 채팅·검사 조회 확인.
 - 미실행: 실제 두 PC 연결.
+
+### 2026-10-22 / Claude(학습 PC) / 최종 모델 v5(v5_merged_default) — 클래스 이름 변경, 불량 2개로 분리
+
+- 종류: 학습 모델, 문서 (앱 코드 변경 없음 — 앱 수정은 컨베이어 PC에서)
+- 근거(김하균님 결정): 클래스 이름을 `iphone12_promax_crack`(0), `iphone16_white`(1), `iphone12_pro_silver`(2), `iphone15_pro_Natural_Titanium`(3), `iphone14_white`(4), `iphone8_crack`(5)로. `crack_iphone`은 없애고 깨진 폰을 12 Pro Max / 8로 나눔. 라벨은 다시 따지 않고 번호만 바꿈.
+- 데이터: v4 데이터에서 깨진 12 Pro Max(컨베이어 84 + 옛 60) → 0, 깨진 8(컨베이어 90) → 5, 다른 깨진 폰 230장 제외. 학습 1,248 / 검증 228.
+- 결과: 학습에 안 쓴 155장 판정 v4 153 = v5 153, 깨진 폰 28장 이름까지 정확(8↔12 Pro Max 혼동 0). 검증 P 0.993 / R 0.993 / mAP50 0.991 / mAP50-95 0.861. 제외한 다른 깨진 폰 230장은 69%만 불량으로 잡음.
+- 저장소: `training_model/v5_merged_default/`(onnx·pt·classes·앱용 model_info.json·비교 결과), `training_model/data_set/`(성능 지표·손실 함수 그래프, 클래스별 지표), `training_model/HANDOFF_v5.md`(앱 `YoloOnnxInspector.cs`를 '_crack으로 끝나면 불량'으로 고치는 방법, 교체 순서). `training_model/README.md`·v4 표시·`all_phones/README.md` 맨 위 안내 갱신. `all_phones/` 데이터는 v4 이름 그대로.
+- 주의: `report_from/README.md`의 이름(`iphone12_pro_max_crack`, `iphone_8_crack`)과 실제 모델 이름(`iphone12_promax_crack`, `iphone8_crack`)이 다름 → 보고서 문서 맞출 필요.
+- 다음 작업(컨베이어 PC): `training_model/HANDOFF_v5.md` 2→3번 — 앱 코드 수정 → v5로 교체 → 실물 시험.
