@@ -1,8 +1,23 @@
-# final — 생산라인 시스템 최종 통합본 (2026-10-21 밤 최신)
+# final — 생산라인 시스템 최종 통합본 (2026-10-22 김하균 수정본)
 
 > **이 문서를 받은 Codex에게:** 목표는 **PC 2대에서 서버 연결이 되는지 확인**하는 것입니다.
-> `ProductionLine_final_20261021.zip`을 받아 아래 순서대로 빌드·실행하고, "4. 확인할 것"의 결과를 김하균님에게 보고하세요.
+> `ProductionLine_final_20261022.zip`을 받아 아래 순서대로 빌드·실행하고, "4. 확인할 것"의 결과를 김하균님에게 보고하세요.
 > 코드를 고치기 전에 먼저 실행 결과를 보고하세요.
+
+## 0. 2026-10-22 수정 내용 (10-21 통합본 기준, 김하균)
+
+| 구분 | 바뀐 것 |
+|---|---|
+| 화면 배율 | 관리자·작업자 앱 csproj에 `ApplicationHighDpiMode=DpiUnawareGdiScaled` 다시 넣음 (175% 등에서 글자 잘림 방지) |
+| 센서 기록 DB | 새 표 `LineHardwareLogs`: 센서·벨트 상태를 10초마다 + 상태가 바뀐 순간 저장, 7일 지난 기록 자동 삭제 (`appsettings.json`의 `HardwareLogIntervalSeconds`, `HardwareLogRetentionDays`) |
+| 점수 칸 삭제 | `Inspections`의 안 쓰는 `ShapeScore`, `ColorScore` 삭제 (기존 검사 기록은 그대로 남음) |
+| 휴대폰 기종 | `Inspections`에 `PhoneModel` 칸 추가, 작업자 앱이 YOLO 기종을 같이 보냄 |
+| 중복 방지 | 검사마다 요청 번호(`RequestId`)를 보내고, 같은 번호가 다시 오면 서버가 두 번 저장하지 않음 |
+| 공용 양식 | `Contracts.cs`: `CameraInspectionRequest`에 `PhoneModel`, `RequestId` / `InspectionDto`에 `PhoneModel` 추가 (모두 선택 칸) |
+| 마이그레이션 | `AddLineHardwareLogs` → `RemoveInspectionScores` → `AddInspectionPhoneModel` (서버를 켜면 자동 적용) |
+| 정리 문서 | `md파일/휴대폰기종_중복방지_변경정리_2026-10-22.md`, 보고서 예시 `md파일/보고서_예시.html` |
+
+확인: 전체 빌드 경고 0·오류 0, 예전 DB·새 DB 모두 마이그레이션 시험 통과. 실제 아두이노·카메라 연결 시험은 아직 안 함.
 
 ## 1. 이 압축에 들어 있는 것
 

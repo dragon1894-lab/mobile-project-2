@@ -6,7 +6,7 @@
 
 | 위치 | 내용 | 누가 보나 |
 |---|---|---|
-| [`final/`](final/README.md) | **최신 통합본** (2026-10-21 23:14, 컨베이어 PC 기준). `ProductionLine_final_20261021.zip` + 두 PC 연결 확인 순서 | 모두 |
+| [`final/`](final/README.md) | **최신 통합본** (2026-10-22 김하균 수정본: 센서 기록 DB, 점수 칸 삭제, 기종·중복 방지, 화면 배율). `ProductionLine_final_20261022.zip` + 두 PC 연결 확인 순서 | 모두 |
 | [`with-claude/`](with-claude/README.md) | 이전 통합 코드 (5명 코드 + 서버·DB, 2026-10-20, 김하균 PC의 노트북용 폴더와 같음). 최신 코드는 `final/` | 참고 |
 | [`with-claude-yolo-training/`](with-claude-yolo-training/README.md) | **깨진 아이폰(crack_iphone) YOLO 학습** 인수인계 + 조장 학습 툴 코드 (2026-10-20) | 학습을 맡은 Claude, 김하균 |
 | [`all_phones/`](all_phones/README.md) | **아이폰 5종 통합 YOLO 모델 v4**(불량 + 기종 4개, 우드락 컨베이어 사진·15 Pro 보강) 사진·라벨·모델(`models/best.onnx`), 인식률, 컨베이어 PC에서 할 일 (2026-10-21) | 컨베이어 검출 담당 Claude, 조장, 김하균 |
@@ -26,7 +26,7 @@
 
 ## 2026-10-21 기준 상태
 
-- 최신 통합본은 `final/ProductionLine_final_20261021.zip` (00_Shared ~ 06_TrainingTool, YOLO 모델 v4, 펌웨어 V7)
+- 최신 통합본은 `final/ProductionLine_final_20261022.zip` (00_Shared ~ 06_TrainingTool, YOLO 모델 v4, 펌웨어 V7)
 - 서버: SQLite DB(계정·검사·문제·이력·관리자 채팅), 단체 채팅은 `data/group-chat.json`, 검사 사진은 `data/inspection-images`. 압축에는 DB·채팅·사진이 빠져 있어 처음 켜면 빈 DB와 기본 계정이 생김
 - 서버 연결 창: 관리자 앱 **[서버 켜고 접속]**, 작업자 앱 같은 네트워크 서버 자동 찾기(UDP 5051) + IP 직접 입력
 - 작업자 앱: 메뉴 5개(실시간 검사 / 검사 개수·지난 기록 / 문제·조치 / AI 상담 / 단체 채팅), COM 선택·벨트 연결·벨트 구동 버튼
