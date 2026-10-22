@@ -66,6 +66,7 @@ namespace _01_AdminApp
 
         public InspectionIssueForm(IDashboardService dashboard, ILineDetailService detail)
         {
+            AdminTheme.AttachOnLoad(this);
             _dashboard = dashboard;
             _detail = detail;
             _photo = new InspectionPhotoPanel(detail);

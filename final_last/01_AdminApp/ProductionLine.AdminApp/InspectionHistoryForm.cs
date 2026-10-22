@@ -69,6 +69,7 @@ namespace _01_AdminApp
 
         public InspectionHistoryForm(IDashboardService dashboard, ILineDetailService detail)
         {
+            AdminTheme.AttachOnLoad(this);
             _dashboard = dashboard;
             _detail = detail;
             _photo = new InspectionPhotoPanel(detail);

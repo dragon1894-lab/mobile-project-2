@@ -35,6 +35,26 @@ public sealed class GroupChatPanel : UserControl
     private Form? _owner;
     public int UnreadCount { get; private set; }
     public event EventHandler? UnreadChanged;
+    private bool _dark;
+    // 관리자 앱 어두운 테마용: 채팅 글을 밝은 색으로 그림. 기본값(false)은 작업자 앱의 밝은 채팅 그대로입니다.
+    public bool DarkMode
+    {
+        get => _dark;
+        set
+        {
+            _dark = value;
+            _history.BackColor = value ? Color.FromArgb(12, 23, 39) : Color.FromArgb(248, 250, 253);
+            _history.ForeColor = BodyColor;
+            if (_messages.Count > 0) RenderHistory();
+            else _history.ForeColor = BodyColor;
+            SetNotice();
+        }
+    }
+    private Color BodyColor => _dark ? Color.FromArgb(236, 242, 249) : Color.FromArgb(34, 45, 60);
+    private Color AdminColor => _dark ? Color.FromArgb(110, 170, 255) : Color.FromArgb(32, 102, 190);
+    private Color WorkerColor => _dark ? Color.FromArgb(120, 220, 170) : Color.FromArgb(34, 45, 60);
+    private Color OkColor => _dark ? Color.FromArgb(61, 214, 140) : Color.FromArgb(22, 130, 85);
+    private Color ErrorColor => _dark ? Color.FromArgb(255, 107, 107) : Color.Firebrick;
 
     public GroupChatPanel(ProductionLineApiClient login)
     {
@@ -111,7 +131,7 @@ public sealed class GroupChatPanel : UserControl
     private void SetNotice(string? error = null)
     {
         _notice.Text = error ?? "관리자·작업자 모두에게 공유 · Enter 전송 / Shift+Enter 줄바꿈";
-        _notice.ForeColor = error is null ? Color.DimGray : Color.Firebrick;
+        _notice.ForeColor = error is null ? (_dark ? Color.FromArgb(143, 162, 186) : Color.DimGray) : ErrorColor;
     }
 
     private async Task PollAsync()
@@ -160,7 +180,7 @@ public sealed class GroupChatPanel : UserControl
             if (CanRead()) MarkRead();
             UnreadChanged?.Invoke(this, EventArgs.Empty);
             _status.Text = $"● 채팅 연결됨 · 자동 갱신 · {DateTime.Now:HH:mm:ss}";
-            _status.ForeColor = Color.FromArgb(22, 130, 85);
+            _status.ForeColor = OkColor;
         }
         catch (OperationCanceledException) when (_closing) { }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException or System.Text.Json.JsonException or IOException)
@@ -168,7 +188,7 @@ public sealed class GroupChatPanel : UserControl
             if (!_closing)
             {
                 _status.Text = "● 채팅 연결 확인 필요 · " + FriendlyError(ex);
-                _status.ForeColor = Color.Firebrick;
+                _status.ForeColor = ErrorColor;
             }
         }
         finally
@@ -202,7 +222,7 @@ public sealed class GroupChatPanel : UserControl
             SetNotice();
             RenderHistory();
             _status.Text = "● 메시지를 전송했습니다.";
-            _status.ForeColor = Color.FromArgb(22, 130, 85);
+            _status.ForeColor = OkColor;
         }
         catch (OperationCanceledException) when (_closing) { }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException or System.Text.Json.JsonException or IOException)
@@ -211,7 +231,7 @@ public sealed class GroupChatPanel : UserControl
             {
                 SetNotice("전송을 확인하지 못했습니다. 입력 내용은 유지됩니다. 같은 내용으로 다시 전송할 수 있습니다.");
                 _status.Text = "● 전송 확인 필요 · " + FriendlyError(ex);
-                _status.ForeColor = Color.Firebrick;
+                _status.ForeColor = ErrorColor;
             }
         }
         finally
@@ -243,10 +263,10 @@ public sealed class GroupChatPanel : UserControl
         {
             var own = message.SenderId == _login.CurrentUser?.Id;
             _history.SelectionFont = bold;
-            _history.SelectionColor = message.SenderRole == UserRole.Admin ? Color.FromArgb(32, 102, 190) : Color.FromArgb(34, 45, 60);
+            _history.SelectionColor = message.SenderRole == UserRole.Admin ? AdminColor : WorkerColor;
             _history.AppendText($"{(own ? "[나] " : "")}{(message.SenderRole == UserRole.Admin ? "관리자" : "작업자")} {message.SenderName} ({message.SenderId}) · {message.SentAt.ToLocalTime():MM/dd HH:mm:ss}\r\n");
             _history.SelectionFont = _history.Font;
-            _history.SelectionColor = Color.FromArgb(34, 45, 60);
+            _history.SelectionColor = BodyColor;
             _history.AppendText(message.Text + "\r\n\r\n");
         }
         _history.SelectionStart = _autoScroll.Checked ? _history.TextLength : Math.Min(selected, _history.TextLength);

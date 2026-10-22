@@ -32,6 +32,7 @@ namespace _01_AdminApp
 
         public UserManagementForm(IUserService users, IDashboardService dashboard)
         {
+            AdminTheme.AttachOnLoad(this);
             _users = users;
             _dashboard = dashboard;
             Text = "사용자 관리";

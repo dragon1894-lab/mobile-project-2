@@ -23,6 +23,8 @@ namespace _01_AdminApp
         private readonly Button _refresh = new Button();
         private readonly Button _play = new Button();
         private readonly Label _status = new Label();
+        private readonly StatusPill _linePill = new StatusPill();
+        private readonly StatusPill _serverPill = new StatusPill();
         private readonly Label[] _values = Enumerable.Range(0, 5).Select(_ => ValueLabel()).ToArray();
         private readonly System.Windows.Forms.Timer _animation = new System.Windows.Forms.Timer();
         private GroupChatPanel? _groupChat;
@@ -51,8 +53,9 @@ namespace _01_AdminApp
             MinimumSize = new Size(1050, 820);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("맑은 고딕", 10F);
-            BackColor = Color.FromArgb(242, 246, 250);
+            BackColor = AdminTheme.Canvas;
             BuildScreen(user);
+            AdminTheme.Attach(this);
             _animation.Interval = 50;
             _animation.Tick += (_, _) =>
             {
@@ -127,60 +130,80 @@ namespace _01_AdminApp
             }
         }
 
+        // 화면 배치 (2026-10-23 어두운 테마): 왼쪽 메뉴 | 제목·상태·버튼 / 지표 카드 / 라인 카드 / 아래 상태 줄
+        // 메뉴 버튼의 이름과 동작은 예전 위쪽 버튼 줄과 같습니다.
         private void BuildScreen(UserDto user)
         {
+            var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty };
+            shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 256));
+            shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            var sidebar = new Panel { Dock = DockStyle.Fill, BackColor = AdminTheme.Sidebar, Padding = new Padding(14, 22, 14, 16), Margin = Padding.Empty };
+            var brand = new Panel { Dock = DockStyle.Top, Height = 92 };
+            brand.Controls.Add(new Label { Text = "관리자 콘솔", Dock = DockStyle.Top, Height = 26, ForeColor = AdminTheme.Muted, Font = new Font("맑은 고딕", 9F) });
+            brand.Controls.Add(new Label { Text = "생산라인 모니터링", Dock = DockStyle.Top, Height = 40, ForeColor = Color.White, Font = new Font("맑은 고딕", 15F, FontStyle.Bold) });
+            var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Margin = Padding.Empty };
+            toolbar.Controls.Add(new NavButton("전체 현황", "") { Selected = true });
+            var account = new Panel { Dock = DockStyle.Bottom, Height = 54 };
+            account.Controls.Add(new Label { Text = $"관리자  {user.Name}\r\n{user.Id}", Dock = DockStyle.Fill, ForeColor = AdminTheme.Muted, Font = new Font("맑은 고딕", 9F) });
+            sidebar.Controls.Add(toolbar); sidebar.Controls.Add(brand); sidebar.Controls.Add(account);
+            toolbar.SizeChanged += (_, _) => { foreach (Control c in toolbar.Controls) c.Width = toolbar.ClientSize.Width - 2; };
+            shell.Controls.Add(sidebar, 0, 0);
+
             var root = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill, Padding = new Padding(12), ColumnCount = 1,
-                RowCount = 7, Margin = Padding.Empty
+                Dock = DockStyle.Fill, Padding = new Padding(22, 14, 22, 10), ColumnCount = 1,
+                RowCount = 5, Margin = Padding.Empty
             };
-            foreach (float h in new[] { 55F, 96F, 24F, 44F })
+            foreach (float h in new[] { 64F, 118F, 26F })
                 root.RowStyles.Add(new RowStyle(SizeType.Absolute, h));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
-            var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
+            var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5, RowCount = 1, Margin = Padding.Empty };
             header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 176));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
             header.Controls.Add(new Label
             {
                 Text = "전체 생산라인 현황", Dock = DockStyle.Fill,
-                Font = new Font("맑은 고딕", 23F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(22, 50, 79), TextAlign = ContentAlignment.MiddleLeft
+                Font = new Font("맑은 고딕", 21F, FontStyle.Bold),
+                ForeColor = AdminTheme.Text, TextAlign = ContentAlignment.MiddleLeft
             }, 0, 0);
-            header.Controls.Add(new Label
-            {
-                Text = $"관리자  {user.Name} ({user.Id})", Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleRight, AutoEllipsis = true
-            }, 1, 0);
+            _linePill.Dock = DockStyle.Fill; _linePill.Margin = new Padding(0, 14, 10, 14); _linePill.Text = "LINE 1 · 확인 중"; _linePill.Dot = AdminTheme.Muted; _linePill.ForeColor = AdminTheme.Muted;
+            _serverPill.Dock = DockStyle.Fill; _serverPill.Margin = new Padding(0, 14, 10, 14); _serverPill.Text = "서버 확인 중"; _serverPill.Dot = AdminTheme.Muted; _serverPill.ForeColor = AdminTheme.Muted;
+            header.Controls.Add(_linePill, 1, 0); header.Controls.Add(_serverPill, 2, 0);
             root.Controls.Add(header, 0, 0);
-            var totals = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5, RowCount = 1 };
+            var totals = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5, RowCount = 1, Margin = Padding.Empty };
             string[] names = { "전체 라인", "구동 중인 라인", "실제 검사 수", "실제 불량률", "미종결 문제" };
+            string[] icons = { "", "", "", "", "" };
+            Color[] accents = { AdminTheme.Accent, AdminTheme.Good, AdminTheme.Text, AdminTheme.Bad, AdminTheme.Warn };
             for (int i = 0; i < 5; i++)
             {
                 totals.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 5));
-                totals.Controls.Add(Metric(names[i], _values[i]), i, 0);
+                _values[i].ForeColor = accents[i];
+                var card = Metric(names[i], icons[i], accents[i], _values[i]);
+                card.Margin = new Padding(i == 0 ? 0 : 6, 4, i == 4 ? 0 : 6, 8);
+                totals.Controls.Add(card, i, 0);
             }
             root.Controls.Add(totals, 0, 1);
             root.Controls.Add(new Label
             {
                 Text = "검사 수·불량률은 실제 라인만 집계  |  라인 2·3·4는 예시 데이터  |  전체 정지: 실제 검사·벨트 및 가상 라인 정지",
-                Dock = DockStyle.Fill, ForeColor = Color.DimGray, TextAlign = ContentAlignment.MiddleLeft
+                Dock = DockStyle.Fill, ForeColor = AdminTheme.Muted, TextAlign = ContentAlignment.MiddleLeft
             }, 0, 2);
-            var toolbar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, AutoScroll = true };
             _refresh.Text = "새로고침";
-            _refresh.AutoSize = true;
+            _refresh.Dock = DockStyle.Fill; _refresh.Margin = new Padding(0, 12, 10, 12);
             _refresh.Click += async (_, _) => await RefreshAsync();
-            toolbar.Controls.Add(_refresh);
+            header.Controls.Add(_refresh, 3, 0);
             if (_api != null)
             {
-                var remote = new Button { Text = "작업자 원격 운영 · 그래프", AutoSize = true };
+                var remote = new NavButton("작업자 원격 운영 · 그래프", "");
                 remote.Click += (_, _) => { using var form = new RemoteWorkerForm(_api); form.ShowDialog(this); };
                 toolbar.Controls.Add(remote);
             }
-            AddMenu(toolbar, "사용자 관리", () => new UserManagementForm(_userService, _service));
-            AddMenu(toolbar, "검사 결과 / 문제 조회", () => new InspectionIssueForm(_service, _detailService));
-            var completion = new Button { Text = "완료 요청 확인", AutoSize = true };
+            AddMenu(toolbar, "검사 결과 / 문제 조회", "", () => new InspectionIssueForm(_service, _detailService));
+            var completion = new NavButton("완료 요청 확인", "");
             completion.Click += async (_, _) =>
             {
                 using var form = new CompletionRequestForm(_service, _api);
@@ -188,11 +211,12 @@ namespace _01_AdminApp
                 await RefreshAsync();
             };
             toolbar.Controls.Add(completion);
-            AddMenu(toolbar, "검사 이력 / 통계", () => new InspectionHistoryForm(_service, _detailService));
+            AddMenu(toolbar, "검사 이력 / 통계", "", () => new InspectionHistoryForm(_service, _detailService));
+            AddMenu(toolbar, "사용자 관리", "", () => new UserManagementForm(_userService, _service));
             if (_api != null)
             {
                 // 생산 검사 보고서: 지금까지(로그인~지금)를 CSV로 저장. 앱을 끌 때도 자동 저장됩니다.
-                var report = new Button { Text = "보고서 저장", AutoSize = true };
+                var report = new NavButton("보고서 저장", "");
                 report.Click += async (_, _) =>
                 {
                     report.Enabled = false;
@@ -211,7 +235,7 @@ namespace _01_AdminApp
                 toolbar.Controls.Add(report);
             }
             _play.Text = "전체 정지";
-            _play.AutoSize = true;
+            _play.Dock = DockStyle.Fill; _play.Margin = new Padding(0, 12, 0, 12);
             _play.Enabled = true;
             _play.Click += async (_, _) =>
             {
@@ -231,7 +255,7 @@ namespace _01_AdminApp
                     _status.Text = _stopStatus;
                 }
             };
-            toolbar.Controls.Add(_play);
+            header.Controls.Add(_play, 4, 0);
             if (_api != null)
             {
                 // 단체 채팅: 창을 닫아도 숨기기만 하고 2초마다 새 메시지를 확인해 버튼에 안 읽은 수를 표시
@@ -249,25 +273,50 @@ namespace _01_AdminApp
                     e.Cancel = true;
                     _chatWindow.Hide();
                 };
-                var chatButton = new Button { Text = "단체 채팅", AutoSize = true };
+                var chatButton = new NavButton("단체 채팅", "");
                 chatButton.Click += (_, _) => ShowGroupChat();
-                _groupChat.UnreadChanged += (_, _) => chatButton.Text = _groupChat.UnreadCount > 0
-                    ? $"단체 채팅 ({_groupChat.UnreadCount})" : "단체 채팅";
+                // 안 읽은 수는 메뉴 오른쪽 빨간 숫자로 표시 (글자는 예전처럼 함께 바뀜)
+                _groupChat.UnreadChanged += (_, _) =>
+                {
+                    chatButton.Text = _groupChat.UnreadCount > 0 ? $"단체 채팅 ({_groupChat.UnreadCount})" : "단체 채팅";
+                    chatButton.Badge = _groupChat.UnreadCount; chatButton.Invalidate();
+                };
                 toolbar.Controls.Add(chatButton);
+                AdminTheme.Attach(_chatWindow);
             }
-            root.Controls.Add(toolbar, 0, 3);
             _lineList.Dock = DockStyle.Fill;
             _lineList.AutoScroll = false;
             _lineList.Padding = Padding.Empty;
             _lineList.SizeChanged += (_, _) => ResizeCards();
-            root.Controls.Add(_lineList, 0, 4);
+            root.Controls.Add(_lineList, 0, 3);
+            // 아래 상태 줄: 왼쪽 = 화면 상태 글, 오른쪽 = 서버 연결 확인
+            var footer = new CardPanel { Dock = DockStyle.Fill, Padding = new Padding(16, 4, 12, 4), Margin = new Padding(0, 8, 0, 0) };
+            var footerLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, BackColor = AdminTheme.Surface };
+            footerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52));
+            footerLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48));
             _status.Dock = DockStyle.Fill;
             _status.TextAlign = ContentAlignment.MiddleLeft;
             _status.ForeColor = Color.DimGray;
-            root.Controls.Add(_status, 0, 5);
+            footerLayout.Controls.Add(_status, 0, 0);
             _connection.Dock = DockStyle.Fill;
-            root.Controls.Add(_connection, 0, 6);
-            Controls.Add(root);
+            footerLayout.Controls.Add(_connection, 1, 0);
+            footer.Controls.Add(footerLayout);
+            root.Controls.Add(footer, 0, 4);
+            shell.Controls.Add(root, 1, 0);
+            Controls.Add(shell);
+        }
+
+        // 위쪽 알약 표시: 대표 라인 장비 상태와 서버 조회 상태
+        private void UpdatePills(LineStatusDto? real, bool serverOk)
+        {
+            _serverPill.Text = serverOk ? $"서버 정상 · {DateTime.Now:HH:mm:ss}" : "서버 조회 실패";
+            _serverPill.Dot = _serverPill.ForeColor = serverOk ? AdminTheme.Good : AdminTheme.Bad; _serverPill.Invalidate();
+            if (!serverOk) return;
+            var h = real?.Hardware;
+            (string text, Color color) state = h is not { IsFresh: true } ? ("LINE 1 · 장비 미연결", AdminTheme.Muted)
+                : h.EmergencyStopped ? ("LINE 1 · 긴급 정지", AdminTheme.Bad)
+                : h.BeltRunning ? ("LINE 1 · 정상 가동", AdminTheme.Good) : ("LINE 1 · 벨트 정지", AdminTheme.Warn);
+            _linePill.Text = state.text; _linePill.Dot = _linePill.ForeColor = state.color; _linePill.Invalidate();
         }
 
         // 1번 라인 보고서를 서버에서 받아 문서\생산라인 보고서 폴더에 CSV(엑셀용 UTF-8 BOM)로 저장하고 경로를 돌려줍니다.
@@ -329,6 +378,7 @@ namespace _01_AdminApp
                 _values[2].Text = (normal + defect + undecided).ToString("N0");
                 _values[3].Text = normal + defect == 0 ? "-" : $"{defect * 100.0 / (normal + defect):0.0}%";
                 _values[4].Text = issues.Count(x => x.Status != IssueStatus.Closed).ToString("N0");
+                UpdatePills(real.FirstOrDefault(), true);
                 _lineList.SuspendLayout();
                 try
                 {
@@ -362,7 +412,7 @@ namespace _01_AdminApp
             }
             catch (Exception ex)
             {
-                if (!IsDisposed && !Disposing) { _status.Text = "조회 실패 (기존 데이터 표시 유지) · 시뮬레이션 재생은 계속 제어할 수 있습니다: " + ex.Message; _connection.SetSessionStatus("데이터 조회 실패 · 마지막 표시 값은 최신이 아닐 수 있습니다."); }
+                if (!IsDisposed && !Disposing) { _status.Text = "조회 실패 (기존 데이터 표시 유지) · 시뮬레이션 재생은 계속 제어할 수 있습니다: " + ex.Message; _connection.SetSessionStatus("데이터 조회 실패 · 마지막 표시 값은 최신이 아닐 수 있습니다."); UpdatePills(null, false); }
             }
             finally
             {
@@ -421,9 +471,9 @@ namespace _01_AdminApp
             _chatWindow.Show();
             _chatWindow.Activate();
         }
-        private void AddMenu(FlowLayoutPanel toolbar, string title, Func<Form> create)
+        private void AddMenu(FlowLayoutPanel toolbar, string title, string icon, Func<Form> create)
         {
-            var button = new Button { Text = title, AutoSize = true };
+            var button = new NavButton(title, icon);
             button.Click += (_, _) => { using var form = create(); form.ShowDialog(this); };
             toolbar.Controls.Add(button);
         }
@@ -434,20 +484,23 @@ namespace _01_AdminApp
         }
         private static Label ValueLabel() => new Label
         {
-            Text = "-", Dock = DockStyle.Fill, AutoEllipsis = true,
-            Font = new Font("맑은 고딕", 23F, FontStyle.Bold), ForeColor = Color.FromArgb(35, 100, 180)
+            Text = "-", Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft,
+            Font = new Font("맑은 고딕", 24F, FontStyle.Bold), ForeColor = AdminTheme.Accent
         };
-        private static Control Metric(string name, Label value)
+        // 지표 카드: 왼쪽 아이콘 동그라미 + 이름 + 큰 숫자
+        private static Control Metric(string name, string icon, Color accent, Label value)
         {
-            var card = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12, 8, 8, 6),
-                Margin = new Padding(0, 3, 8, 5), ColumnCount = 1, RowCount = 2
-            };
-            card.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
-            card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            card.Controls.Add(new Label { Text = name, Dock = DockStyle.Fill, ForeColor = Color.DimGray }, 0, 0);
-            card.Controls.Add(value, 0, 1);
+            var card = new CardPanel { Dock = DockStyle.Fill, Padding = new Padding(12, 12, 8, 10) };
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty, BackColor = AdminTheme.Surface };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 46));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            var badge = new IconBadge { Glyph = icon, Accent = accent, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 8, 4) };
+            layout.Controls.Add(badge, 0, 0); layout.SetRowSpan(badge, 2);
+            layout.Controls.Add(new Label { Text = name, Dock = DockStyle.Fill, ForeColor = AdminTheme.Muted, TextAlign = ContentAlignment.MiddleLeft }, 1, 0);
+            layout.Controls.Add(value, 1, 1);
+            card.Controls.Add(layout);
             return card;
         }
     }

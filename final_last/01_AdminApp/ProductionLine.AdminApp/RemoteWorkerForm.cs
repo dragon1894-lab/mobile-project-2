@@ -29,6 +29,7 @@ public sealed class RemoteWorkerForm : Form
     private int _ticks, _photoGeneration;
     public RemoteWorkerForm(ProductionLineApiClient api, int lineId = 1)
     {
+        AdminTheme.AttachOnLoad(this);
         _api = api; _lineId = lineId;
         _model.FormattingEnabled = true;
         _model.Format += (_, e) => { if (e.ListItem as string == "__all__") e.Value = "전체 학습 모델 사용"; };

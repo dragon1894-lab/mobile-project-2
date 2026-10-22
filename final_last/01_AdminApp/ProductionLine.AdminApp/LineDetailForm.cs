@@ -15,6 +15,7 @@ public sealed class LineDetailForm : Form
     private bool _busy;
     public LineDetailForm(int lineId, IDashboardService dashboard, ILineDetailService detail, ProductionLineApiClient? api = null)
     {
+        AdminTheme.AttachOnLoad(this);
         _lineId = lineId; _dashboard = dashboard; _detail = detail;
         Text = $"LINE {lineId} · 대표 라인 상세";
         ClientSize = new Size(1040, 850); MinimumSize = new Size(850, 700);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -27,7 +27,8 @@ namespace _01_AdminApp
         {
             Height = 420;
             Margin = new Padding(0, 0, 0, 14);
-            BackColor = Color.White;
+            BackColor = AdminTheme.Surface;
+            DoubleBuffered = true; ResizeRedraw = true;
             Padding = new Padding(14);
             var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6 };
             _layout = layout;
@@ -41,7 +42,7 @@ namespace _01_AdminApp
             _title.Dock = DockStyle.Fill;
             _title.AutoEllipsis = true;
             _title.Font = new Font("맑은 고딕", 15F, FontStyle.Bold);
-            _title.ForeColor = Color.FromArgb(22, 50, 79);
+            _title.ForeColor = AdminTheme.Text;
             _detail.Text = "상세 보기";
             _detail.Dock = DockStyle.Fill;
             _detail.Click += (_, _) => { if (_line != null) DetailRequested?.Invoke(_line); };
@@ -49,7 +50,7 @@ namespace _01_AdminApp
             _state.Dock = _counts.Dock = _updated.Dock = DockStyle.Fill;
             _state.TextAlign = _counts.TextAlign = _updated.TextAlign = ContentAlignment.MiddleLeft;
             _state.AutoEllipsis = _counts.AutoEllipsis = _updated.AutoEllipsis = true;
-            _updated.ForeColor = Color.DimGray;
+            _updated.ForeColor = AdminTheme.Muted;
             _conveyor.Dock = DockStyle.Fill;
             _emergency.Text = "긴급 정지 (시뮬레이션)";
             _emergency.Dock = DockStyle.Fill;
@@ -77,7 +78,7 @@ namespace _01_AdminApp
             _compact = true; Padding = new Padding(8); Margin = Padding.Empty;
             _title.Font = new Font("맑은 고딕",12F,FontStyle.Bold);
             _state.Font = _counts.Font = _updated.Font = _emergency.Font = new Font("맑은 고딕",9F);
-            _layout.RowStyles[0].Height = 30;
+            _layout.RowStyles[0].Height = 34;
             _layout.RowStyles[1].Height = 24;
             _layout.RowStyles[2].Height = 24;
             _layout.RowStyles[4].Height = 30;
@@ -87,6 +88,16 @@ namespace _01_AdminApp
 
         protected override void Dispose(bool disposing)
         { if (disposing) _tip.Dispose(); base.Dispose(disposing); }
+
+        // 둥근 어두운 카드 (모서리 바깥은 부모 바탕색)
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            using (var canvas = new SolidBrush(Parent?.BackColor ?? AdminTheme.Canvas)) e.Graphics.FillRectangle(canvas, ClientRectangle);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var path = AdminTheme.Round(new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1)), 12);
+            using var fill = new SolidBrush(AdminTheme.Surface); e.Graphics.FillPath(fill, path);
+            using var pen = new Pen(_line?.IsReal == true ? Color.FromArgb(52, 96, 160) : AdminTheme.Border); e.Graphics.DrawPath(pen, path);
+        }
 
         public void UpdateLine(LineStatusDto line, int openIssues, int completionRequests)
         {
@@ -187,7 +198,7 @@ namespace _01_AdminApp
             public ConveyorView()
             {
                 DoubleBuffered = true;
-                BackColor = Color.FromArgb(248, 248, 248);
+                BackColor = AdminTheme.Input;
                 SetStyle(ControlStyles.ResizeRedraw, true);
             }
             public void Advance()
@@ -222,25 +233,25 @@ namespace _01_AdminApp
             private void DrawCompactScene(Graphics g)
             {
                 using var font = new Font("맑은 고딕",8F);
-                using var pen = new Pen(Color.FromArgb(125,130,134));
-                using var frame = new SolidBrush(Color.FromArgb(205,205,205));
-                using var belt = new SolidBrush(Color.FromArgb(232,232,232));
-                using var motor = new SolidBrush(Color.FromArgb(125,131,136));
-                TextRenderer.DrawText(g,"직선 라인 · 회전판 분류",font,new Rectangle(5,0,Width/2-10,20),Color.DimGray,TextFormatFlags.EndEllipsis);
-                TextRenderer.DrawText(g,MotionText,font,new Rectangle(Width/2,0,Width/2-5,20),EmergencyStopped?Color.Firebrick:Color.DimGray,TextFormatFlags.Right|TextFormatFlags.EndEllipsis);
+                using var pen = new Pen(Color.FromArgb(96,118,145));
+                using var frame = new SolidBrush(Color.FromArgb(58,78,104));
+                using var belt = new SolidBrush(Color.FromArgb(30,46,68));
+                using var motor = new SolidBrush(Color.FromArgb(110,128,150));
+                TextRenderer.DrawText(g,"직선 라인 · 회전판 분류",font,new Rectangle(5,0,Width/2-10,20),AdminTheme.Muted,TextFormatFlags.EndEllipsis);
+                TextRenderer.DrawText(g,MotionText,font,new Rectangle(Width/2,0,Width/2-5,20),EmergencyStopped?AdminTheme.Bad:AdminTheme.Muted,TextFormatFlags.Right|TextFormatFlags.EndEllipsis);
                 float left=18, right=Width-18, width=Math.Max(20,right-left);
                 float area=Math.Max(25,Height-38), beltHeight=Math.Clamp(area*.24F,12,38);
                 float beltTop=22+area*.52F, pivotY=beltTop+beltHeight+6;
                 float pivotX=left+width*.65F, length=Math.Min(width*.215F,area*.65F);
                 float binX=pivotX+length*.574F, binWidth=Math.Max(28,length*.7F), binTop=28;
                 float binHeight=Math.Max(10,beltTop-binTop-10);
-                using(var bin = new SolidBrush(Color.FromArgb(240,240,240)))
+                using(var bin = new SolidBrush(Color.FromArgb(26,40,60)))
                     g.FillRectangle(bin,binX-binWidth/2,binTop,binWidth,binHeight);
                 g.DrawRectangle(pen,binX-binWidth/2,binTop,binWidth,binHeight);
                 g.FillRectangle(frame,binX-binWidth*.38F,binTop+binHeight,binWidth*.76F,beltTop-binTop-binHeight);
                 g.FillRectangle(frame,left,beltTop,width,beltHeight);g.DrawRectangle(pen,left,beltTop,width,beltHeight);
                 g.FillRectangle(belt,left+4,beltTop+3,Math.Max(1,width-8),Math.Max(1,beltHeight-6));
-                using(var tread=new Pen(Color.FromArgb(195,195,195)))
+                using(var tread=new Pen(Color.FromArgb(52,72,98)))
                     for(float x=left+5+(float)_beltPhase*24;x<right-4;x+=24)
                         g.DrawLine(tread,x,beltTop+4,x-5,beltTop+beltHeight-4);
                 g.FillEllipse(motor,left+3,beltTop+3,8,beltHeight-6);
@@ -276,16 +287,16 @@ namespace _01_AdminApp
                     {
                         using var product = new SolidBrush(Color.FromArgb(210,217,221));
                         using var border = new Pen(!HardwareLinked && _simulation.Inspected
-                            ? reject ? Color.FromArgb(175,105,25) : Color.DarkGreen : Color.FromArgb(95,105,112));
+                            ? reject ? AdminTheme.Warn : AdminTheme.Good : Color.FromArgb(95,105,112));
                         float ph=Math.Clamp(beltHeight*.76F,11,26),pw=ph*.59F;
                         g.FillRectangle(product,x-pw/2,y-ph/2,pw,ph);g.DrawRectangle(border,x-pw/2,y-ph/2,pw,ph);
                     }
                 }
                 if(Height>=100)
                 {
-                    TextRenderer.DrawText(g,"인식부",font,new Point((int)cameraX-20,(int)cameraTop-17),Color.DimGray);
-                    TextRenderer.DrawText(g,"불량 분류함",font,new Point((int)(binX+binWidth/2+5),(int)binTop),Color.FromArgb(150,85,20));
-                    TextRenderer.DrawText(g,"모터 축 · 회전 분류판",font,new Point((int)pivotX+27,(int)pivotY+9),Color.DimGray);
+                    TextRenderer.DrawText(g,"인식부",font,new Point((int)cameraX-20,(int)cameraTop-17),AdminTheme.Muted);
+                    TextRenderer.DrawText(g,"불량 분류함",font,new Point((int)(binX+binWidth/2+5),(int)binTop),AdminTheme.Warn);
+                    TextRenderer.DrawText(g,"모터 축 · 회전 분류판",font,new Point((int)pivotX+27,(int)pivotY+9),AdminTheme.Muted);
                 }
             }
 
@@ -303,34 +314,34 @@ namespace _01_AdminApp
                 g.ScaleTransform(scale, scale);
                 using var text = new Font("맑은 고딕", 9F);
                 using var small = new Font("맑은 고딕", 8F);
-                using var pen = new Pen(Color.FromArgb(120,120,120),1);
-                using var frame = new SolidBrush(Color.FromArgb(205,205,205));
-                using var belt = new SolidBrush(Color.FromArgb(232,232,232));
-                using var dark = new SolidBrush(Color.FromArgb(125,131,136));
+                using var pen = new Pen(Color.FromArgb(96,118,145),1);
+                using var frame = new SolidBrush(Color.FromArgb(58,78,104));
+                using var belt = new SolidBrush(Color.FromArgb(30,46,68));
+                using var dark = new SolidBrush(Color.FromArgb(110,128,150));
                 {
-                    Label(g,"직선 라인 · 회전판 분류",text,Color.FromArgb(55,55,55),15,10);
-                    Label(g,MotionText,small,EmergencyStopped?Color.Firebrick:Color.DimGray,338,12);
-                    using var divider = new Pen(Color.FromArgb(220,220,220));
+                    Label(g,"직선 라인 · 회전판 분류",text,AdminTheme.Text,15,10);
+                    Label(g,MotionText,small,EmergencyStopped?AdminTheme.Bad:AdminTheme.Muted,338,12);
+                    using var divider = new Pen(Color.FromArgb(43,62,88));
                     g.DrawLine(divider,15,37,505,37);
                 }
-                using (var bin = new SolidBrush(Color.FromArgb(240,240,240))) g.FillRectangle(bin,348,59,64,43);
+                using (var bin = new SolidBrush(Color.FromArgb(26,40,60))) g.FillRectangle(bin,348,59,64,43);
                 g.DrawRectangle(pen,348,59,64,43);
-                Label(g,"불량 분류함",small,Color.FromArgb(150,85,20),331,41);
-                using (var chute = new SolidBrush(Color.FromArgb(224,224,224))) g.FillRectangle(chute,355,102,50,26);
+                Label(g,"불량 분류함",small,AdminTheme.Warn,331,41);
+                using (var chute = new SolidBrush(Color.FromArgb(34,50,74))) g.FillRectangle(chute,355,102,50,26);
                 g.DrawLine(pen,355,102,355,126);g.DrawLine(pen,405,102,405,126);
                 g.FillRectangle(frame,20,126,474,60);g.DrawRectangle(pen,20,126,474,60);
                 g.FillRectangle(belt,27,132,460,48);
-                using (var tread = new Pen(Color.FromArgb(195,195,195)))
+                using (var tread = new Pen(Color.FromArgb(52,72,98)))
                     for (float x=29+(float)_beltPhase*22;x<487;x+=22) g.DrawLine(tread,x,133,x-7,179);
                 foreach(float x in new[]{31F,482F})
                 { g.FillEllipse(dark,x-7,139,14,34);g.DrawEllipse(pen,x-7,139,14,34); }
                 g.DrawLine(pen,32,126,355,126);g.DrawLine(pen,405,126,482,126);
-                { Label(g,"투입 →",small,Color.DimGray,23,106);Label(g,"통과 →",small,Color.DarkGreen,444,106); }
+                { Label(g,"투입 →",small,AdminTheme.Muted,23,106);Label(g,"통과 →",small,AdminTheme.Good,444,106); }
                 g.FillRectangle(frame,181,84,7,104);g.FillRectangle(frame,228,84,7,104);
                 g.FillRectangle(frame,181,82,54,12);g.DrawRectangle(pen,181,82,54,12);
                 g.FillRectangle(dark,195,94,27,18);
                 using (var lens = new SolidBrush(Color.FromArgb(65,70,74))) g.FillEllipse(lens,204,98,9,9);
-                Label(g,"인식부",small,Color.DimGray,190,61);
+                Label(g,"인식부",small,AdminTheme.Muted,190,61);
 
                 // Pivot fixed below the belt: horizontal at 0°, rotates diagonally for rejects.
                 g.FillRectangle(dark,326,190,29,29);g.DrawRectangle(pen,326,190,29,29);
@@ -338,7 +349,7 @@ namespace _01_AdminApp
                 g.TranslateTransform(340,193);g.RotateTransform((float)-GateAngleDegrees);
                 g.FillRectangle(frame,0,-4,112,8);g.DrawRectangle(pen,0,-4,112,8);g.Restore(plate);
                 using (var shaft = new SolidBrush(Color.FromArgb(80,86,92))) g.FillEllipse(shaft,335,188,10,10);
-                { Label(g,"모터 축",small,Color.DimGray,317,224);Label(g,"회전 분류판",small,Color.DimGray,385,224); }
+                { Label(g,"모터 축",small,AdminTheme.Muted,317,224);Label(g,"회전 분류판",small,AdminTheme.Muted,385,224); }
 
                 var visible = HardwareLinked ? _hasHardwareProduct && Hardware is { IsFresh:true } : _simulation.ProductVisible;
                 if (visible)
@@ -350,7 +361,7 @@ namespace _01_AdminApp
                     if (!HardwareLinked || !Hardware!.Sorting || x<=400)
                     {
                         var colour = HardwareLinked ? Color.FromArgb(95,105,112) : !_simulation.Inspected
-                            ? Color.FromArgb(95,105,112) : _simulation.IsDefective ? Color.FromArgb(175,105,25) : Color.DarkGreen;
+                            ? Color.FromArgb(95,105,112) : _simulation.IsDefective ? AdminTheme.Warn : AdminTheme.Good;
                         using var product = new SolidBrush(Color.FromArgb(210,217,221));
                         using var border = new Pen(colour,1.7F);
                         g.FillRectangle(product,x-10,y-17,20,34);g.DrawRectangle(border,x-10,y-17,20,34);
@@ -360,8 +371,8 @@ namespace _01_AdminApp
                 {
                     var result = HardwareLinked ? Hardware is {IsFresh:true} h ? $"분류 서보 {h.SorterAngle}° · {(h.Sorting?"분류 중":"대기")}" : "장비 연결을 확인하세요."
                         : !_simulation.Inspected ? "판정 대기" : _simulation.IsDefective ? "불량 · 대각선 회전 분류" : "정상 · 판 고정 / 직진 통과";
-                    Label(g,result,small,Color.DimGray,16,207);
-                    Label(g,HardwareLinked ? "제품 이동은 예시 · 벨트/분류판은 실제 장비 상태" : _simulation.DemoDescription+" · 가상 데이터",small,Color.Gray,15,263);
+                    Label(g,result,small,AdminTheme.Muted,16,207);
+                    Label(g,HardwareLinked ? "제품 이동은 예시 · 벨트/분류판은 실제 장비 상태" : _simulation.DemoDescription+" · 가상 데이터",small,AdminTheme.Muted,15,263);
                 }
                 g.Restore(saved);
             }

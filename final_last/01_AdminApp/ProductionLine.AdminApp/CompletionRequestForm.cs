@@ -51,6 +51,7 @@ namespace _01_AdminApp
 
         public CompletionRequestForm(IDashboardService service, ProductionLineApiClient? api = null)
         {
+            AdminTheme.AttachOnLoad(this);
             _service = service ?? throw new ArgumentNullException(nameof(service));
             _chat = new IssueConversationPanel(api);
             Text = "사용자 완료 요청 확인";

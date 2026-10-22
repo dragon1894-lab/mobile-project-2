@@ -44,6 +44,7 @@ namespace _01_AdminApp
             _connection = new ServerConnectionControl(api?.BaseAddress);
             InitializeComponent();
             BuildScreen();
+            AdminTheme.Attach(this);
         }
 
         private static void CloseChildren(Form form)
