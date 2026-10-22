@@ -524,3 +524,11 @@ AI와 DB 연결은 두 수준을 구분한다. 새 조치·문의·매뉴얼 기
 - 저장소: `training_model/v5_merged_default/`(onnx·pt·classes·앱용 model_info.json·비교 결과), `training_model/data_set/`(성능 지표·손실 함수 그래프, 클래스별 지표), `training_model/HANDOFF_v5.md`(앱 `YoloOnnxInspector.cs`를 '_crack으로 끝나면 불량'으로 고치는 방법, 교체 순서). `training_model/README.md`·v4 표시·`all_phones/README.md` 맨 위 안내 갱신. `all_phones/` 데이터는 v4 이름 그대로.
 - 주의: `report_from/README.md`의 이름(`iphone12_pro_max_crack`, `iphone_8_crack`)과 실제 모델 이름(`iphone12_promax_crack`, `iphone8_crack`)이 다름 → 보고서 문서 맞출 필요.
 - 다음 작업(컨베이어 PC): `training_model/HANDOFF_v5.md` 2→3번 — 앱 코드 수정 → v5로 교체 → 실물 시험.
+
+### 2026-10-23 / Claude(컨베이어 PC) / final_last 최종 갱신 — 작업자 AI 상담 상단 상태 영역 병합
+
+- 종류: 구현(작업자 앱 화면만), 문서, 검증
+- 근거(김하균님 요청): 공도현 병합 패키지를 합친 뒤 작업자 AI 상담 화면 위쪽의 연결 상태·응답 시간 영역이 빠져 있었음. 서버·AI 모듈 쪽은 이미 들어가 있었고 작업자 화면 코드만 빠짐. 공도현 `AI채팅_상단상태_버튼_추가병합_20261022` 패키지 기준으로 병합.
+- 한 일: `02_UserApp`에 `AiChatStatusPanel.cs`(상태 영역), `DeviceDiagnosticsForm.cs`(장비 상태 확인 창, 읽기 전용) 추가, `AiConsultationApi.cs`·`AiReplyStatus.cs`를 패키지 버전으로 교체, `UserMainForm.cs` AI 상담 화면에 안내 글·상태 영역 추가, 질문 전송을 상태 영역으로 감쌈, AI 상담 탭을 열면 연결 확인. 질문은 기존 자유 상담(`/api/ai/consult`) 그대로(후속 대화 방식으로 바꾸지 않음). 서버·DB·AI 모듈(MQ-9 최신본)·관리자 앱은 그대로. README·인수인계 문서 갱신, `final_last/ProductionLine_final_last_20261023.zip`을 저장소 파일 기준으로 다시 만듦(경로 구분자 `/`, `.dotnet-home`·`.user` 제외).
+- 검증: 솔루션 빌드 경고 0·오류 0, RemoteVerification 156 통과(자유 AI 상담 포함), AI 모의 시험 58 통과, 별도 테스트 서버로 실제 작업자 앱을 띄워 상태 영역·응답 시간·장비 상태 창 확인.
+- 미실행: 실제 Gemini 키로 "AI 응답 성공" 표시 확인(서버 PC에서 키 저장 후).

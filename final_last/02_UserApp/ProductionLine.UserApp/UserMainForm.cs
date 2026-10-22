@@ -24,7 +24,8 @@ public sealed partial class UserMainForm : Form
     private readonly RichTextBox _aiMessages = Messages();
     private readonly TextBox _aiInput = ChatInput();
     private readonly Button _aiSend = new() { Text = "AI에게 보내기", Width = 140, Height = 42 };
-    private readonly Label _aiReplyState = new() { Dock = DockStyle.Fill, Text = "상담 대기 · 문제를 선택하고 질문하세요.", AutoEllipsis = true, ForeColor = Color.DimGray };
+    // AI 상담 상단 상태 영역: 서버·AI 연결, 응답 결과·시간, 연결 확인/장비 상태 확인 버튼 (공도현 병합 패키지 AiChatStatusPanel)
+    private AiChatStatusPanel _aiStatus = null!;
     private readonly System.Windows.Forms.Timer _refresh = new() { Interval = 1000 };
     private readonly System.Windows.Forms.Timer _frames = new() { Interval = 500 };
     private readonly List<ChatEntry> _conversations = new();
@@ -158,16 +159,24 @@ public sealed partial class UserMainForm : Form
 
     private Control ChatPage()
     {
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(2) };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 4, ColumnCount = 1, Padding = new Padding(2) };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-        layout.Controls.Add(_aiReplyState, 0, 0); layout.Controls.Add(Surface("AI와의 대화", _aiMessages), 0, 1);
+        layout.Controls.Add(new Label { Dock = DockStyle.Fill,
+            Text = "공정에서 궁금한 점이나 문제 증상을 바로 질문하세요.\r\n장비의 최근 보고와 매뉴얼을 참고합니다. 장비 상태 확인에서 연결·미확인 항목을 볼 수 있습니다." }, 0, 0);
+        _aiStatus = new AiChatStatusPanel(_api, () => _lineId) { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None, Padding = new Padding(4, 0, 0, 0), MinimumSize = Size.Empty };
+        layout.Controls.Add(Surface(null, _aiStatus), 0, 1);
+        layout.Controls.Add(Surface("AI와의 대화", _aiMessages), 0, 2);
         var composer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(0, 8, 0, 0) };
         composer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); composer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 148));
         _aiInput.PlaceholderText = "문제를 등록하지 않아도 바로 질문할 수 있습니다.";
         _aiInput.MaxLength = 4000;
         composer.Controls.Add(_aiInput, 0, 0); composer.Controls.Add(_aiSend, 1, 0);
-        layout.Controls.Add(composer, 0, 2); RenderAiChat(); return layout;
+        layout.Controls.Add(composer, 0, 3); RenderAiChat();
+        // AI 상담 탭을 열 때마다 서버 연결·AI 설정을 확인 (외부 AI를 시험 호출하지는 않음)
+        _pages.SelectedIndexChanged += async (_, _) => { if (_pages.SelectedTab?.Controls.Contains(layout) == true) await _aiStatus.CheckConnectionAsync(); };
+        return layout;
     }
 
     private async Task RefreshAsync(bool showError = true)
@@ -275,16 +284,18 @@ public sealed partial class UserMainForm : Form
     private async Task SendAiChatAsync()
     {
         var question = _aiInput.Text.Trim(); if (question.Length == 0) return;
-        _aiSend.Enabled = false; _aiReplyState.Text = "답변을 작성하고 있습니다...";
+        _aiSend.Enabled = false;
         try
         {
-            var response = await AiConsultationApi.ConsultAsync(_api, new AiConsultRequest(null, question));
-            _aiReplyState.Text = AiReplyStatus.FromResponse(response).Label;
+            // 상태 영역으로 감싸 대기·성공·실패와 응답 시간을 표시 (요청 자체는 기존 자유 상담 그대로)
+            var response = await _aiStatus.RunAsync(token => AiConsultationApi.ConsultAsync(_api, new AiConsultRequest(null, question), token));
+            if (IsDisposed) return;
             _conversations.Add(new(Guid.Empty, false, "나", question, DateTimeOffset.Now));
-            _conversations.Add(new(Guid.Empty, false, "AI", response.Answer + "\r\n\r\n근거: " + response.ManualSource + (response.NeedAdmin ? "\r\n담당 관리자에게 확인하세요." : ""), DateTimeOffset.Now));
+            _conversations.Add(new(Guid.Empty, false, "AI", AiReplyStatus.DisplayAnswer(response.Answer) + "\r\n\r\n근거: " + response.ManualSource + (response.NeedAdmin ? "\r\n담당 관리자에게 확인하세요." : ""), DateTimeOffset.Now));
             if (_aiInput.Text.Trim() == question) _aiInput.Clear(); RenderAiChat();
         }
-        catch (Exception ex) { await HandleServerFailureAsync(ex, "AI 상담 전송 실패 · 입력 유지"); _aiReplyState.Text = "전송에 실패했습니다. 연결을 확인하고 다시 보내세요."; }
+        catch (OperationCanceledException) when (IsDisposed) { }
+        catch (Exception ex) { await HandleServerFailureAsync(ex, "AI 상담 전송 실패 · 입력 유지"); }
         finally { if (!IsDisposed) _aiSend.Enabled = true; }
     }
 

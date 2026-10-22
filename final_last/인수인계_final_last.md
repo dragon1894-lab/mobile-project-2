@@ -75,7 +75,8 @@ final_last/
 - `CameraInspection.cs` 카메라+YOLO 연속 검사, 검사 저장(기종·요청 번호) / `CameraSession.cs`
 - `HardwareControls.cs`·`ConveyorSerialController.cs`·`HardwareSerialProtocol.cs` 컨베이어·센서 시리얼
 - `ArduinoFirmwareTools.cs`·`ArduinoSetupForm.cs` 펌웨어 업로드(arduino-cli) / `RemoteWorker.cs` 관리자 원격 명령 수행
-- `AiConsultationApi.cs` AI 상담(`/api/ai/consult`, 35초 대기) / `IssueChat.cs` 문제 채팅
+- `AiConsultationApi.cs` AI 상담(`/api/ai/consult`, 35초 대기)·AI 상태·장비 진단 조회 / `IssueChat.cs` 문제 채팅
+- `AiChatStatusPanel.cs` AI 상담 화면 위쪽 상태 영역(연결·응답 결과·응답 시간, [연결 확인]·[장비 상태 확인]) / `DeviceDiagnosticsForm.cs` 장비 상태 확인 창(읽기 전용)
 
 ### 03_Server (서버·DB)
 - `Program.cs` 시작점: 설정 → 부품 등록 → DB 준비 → 통신 기록 → API 창구
@@ -116,6 +117,7 @@ final_last/
 | 공도현 AI 연동: 장비 진단을 보고 답함, `/api/ai/chat`·상태·진단 창구 (자유 상담 `/api/ai/consult`는 유지) | 05_AiAssistant, 서버 Infrastructure 3개, Shared 2개 |
 | 가스 센서 **MQ-9 통일** (매뉴얼 MQ-2→MQ-9, D8 DO→A0 AO), 진단이 MQ-9 A0 값을 읽음 | `Manuals.json`, `DeviceDiagnosticsService.cs` |
 | 정리 문서 | `md파일/` (발표용 기능 정리, 담당자별 전달 목록, 보고서 예시) |
+| **작업자 AI 상담 상단 상태 영역** (공도현 `AI채팅_상단상태_버튼_추가병합` 패키지): 서버·AI 연결, 응답 결과·시간, [연결 확인]·[장비 상태 확인]. 질문은 기존 자유 상담(`/api/ai/consult`) 그대로 | `AiChatStatusPanel.cs`, `DeviceDiagnosticsForm.cs`, `AiConsultationApi.cs`, `AiReplyStatus.cs`, `UserMainForm.cs` |
 
 ## 5. DB (SQLite, EF Core 마이그레이션 자동 적용)
 
@@ -135,6 +137,7 @@ final_last/
 | 센서 기록 DB / 점수 칸 삭제(기존 기록 보존) | 6 / 10 통과 |
 | 회전판 시뮬레이션 (RemoteVerification `--simulation`) | 45 통과 (노트북 175% 배율의 최소 창 크기 1개만 실패, 원본도 동일) |
 | v5 사진 시험 | 정상 3종·빈 벨트·검은 화면 맞음 / 다른 기종 깨진 폰 사진은 정상으로 나옴(모델 한계) |
+| AI 상단 상태 영역 병합 후 (컨베이어 PC) | 빌드 경고 0·오류 0, RemoteVerification 156 통과, AI 모의 시험 58 통과, 실제 작업자 앱 화면에서 상태 영역·응답 시간·장비 상태 창 확인(테스트 서버, Gemini 키 없이 매뉴얼 답변) |
 
 ## 7. 남은 일 (컨베이어 PC·관리자 PC에서)
 
