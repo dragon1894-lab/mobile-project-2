@@ -195,7 +195,7 @@ public sealed partial class UserMainForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         for (int i = 1; i < 5; i++) root.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
         root.Controls.Add(DeviceHeader(), 0, 0);
-        root.Controls.Add(DeviceRow("▣  컨베이어 모터", "PUL D5 / DIR D6", _motorStatus, Button("벨트 구동", async () => await RunConveyorAsync()), Button("벨트 정지", async () => await StopConveyorAsync("벨트 정지 응답 확인"))), 0, 1);
+        root.Controls.Add(DeviceRow("▣  컨베이어 모터", "PUL D5 / DIR D6", _motorStatus, _actuatorRun = Button("벨트 구동", async () => await RunConveyorAsync()), Button("벨트 정지", async () => await StopConveyorAsync("벨트 정지 응답 확인"))), 0, 1);
         var lightStatus = StatusLabel("자동 켜짐", IndustrialPalette.Green);
         void SyncLightStatus() { lightStatus.Text = _lightState.Text.Contains("실패") ? "●  연결 실패" : _lightState.Text.Contains("진행 중") ? "●  작업 중" : _lightState.Text.Contains("꺼") ? "●  꺼짐" : "●  자동 켜짐"; lightStatus.ForeColor = _lightState.Text.Contains("실패") ? IndustrialPalette.Red : IndustrialPalette.Green; }
         _lightState.TextChanged += (_, _) => SyncLightStatus(); SyncLightStatus();
@@ -204,7 +204,7 @@ public sealed partial class UserMainForm : Form
         void SyncSortStatus() { sortStatus.Text = $"이동 {_sortTravelMs.Value / 1000m:0.#}s\r\n유지 {_sortHoldMs.Value / 1000m:0.#}s"; }
         _sortTimingSummary.TextChanged += (_, _) => SyncSortStatus(); SyncSortStatus();
         root.Controls.Add(DeviceRow("◫  불량 분류 서보", "D11", sortStatus, _automaticSort), 0, 3);
-        root.Controls.Add(DeviceRow("●  긴급 정지 버튼", "NC D12", _emergencyStatus, Button("잠금 해제", async () => await ResetEmergencyAsync())), 0, 4);
+        root.Controls.Add(DeviceRow("●  긴급 정지 버튼", "NC D12", _emergencyStatus, _emergencyReset = Button("잠금 해제", async () => await ResetEmergencyAsync())), 0, 4);
         return root;
     }
 
@@ -224,6 +224,7 @@ public sealed partial class UserMainForm : Form
     // 구동 장치 표의 컨베이어·긴급 정지 상태: 고정 글자 대신 실제 장비 보고로 갱신합니다(UpdateLiveHardware).
     private readonly Label _motorStatus = StatusLabel("미확인", UiMuted);
     private readonly Label _emergencyStatus = StatusLabel("미확인", UiMuted);
+    private Button? _actuatorRun, _emergencyReset;
 
     private static Label StatusLabel(string text, Color color) => new()
     {
@@ -424,8 +425,15 @@ public sealed partial class UserMainForm : Form
         var connected = hardware?.Connected == true;
         _motorStatus.Text = !connected ? "●  미확인" : hardware!.BeltRunning ? "●  구동 중" : "●  정지";
         _motorStatus.ForeColor = connected && hardware!.BeltRunning ? IndustrialPalette.Green : UiMuted;
-        _emergencyStatus.Text = !connected ? "●  미확인" : hardware!.EmergencyStopped ? "●  긴급 정지" : "●  정상";
-        _emergencyStatus.ForeColor = !connected ? UiMuted : hardware!.EmergencyStopped ? IndustrialPalette.Red : IndustrialPalette.Green;
+        // 긴급 정지 잠금 중에는 벨트 구동을 막고, 버튼이 원위치돼 0.2초 지나야 [잠금 해제]를 누를 수 있게 합니다.
+        var latched = connected && hardware!.EmergencyStopped;
+        var switchReady = (_conveyor as ConveyorSerialController)?.EmergencySwitchReady;
+        _emergencyStatus.Text = !connected ? "●  미확인" : !latched ? "●  정상" : switchReady == false ? "●  버튼 눌림" : "●  잠금 중";
+        _emergencyStatus.ForeColor = !connected ? UiMuted : !latched ? IndustrialPalette.Green : switchReady == false ? IndustrialPalette.Red : IndustrialPalette.Amber;
+        if (_emergencyReset != null) _emergencyReset.Enabled = !latched || switchReady != false;
+        if (_actuatorRun != null) _actuatorRun.Enabled = !latched;
+        if (latched) _conveyorRun.Enabled = false;
+        else if (_conveyor != null && !_conveyorCommandBusy) _conveyorRun.Enabled = true;
     }
 
     private async Task RegisterIssueAsync()

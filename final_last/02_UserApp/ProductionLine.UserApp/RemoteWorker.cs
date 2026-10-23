@@ -67,7 +67,8 @@ public sealed partial class UserMainForm
             _conveyorPort.Items.Cast<string>().ToArray(),_remoteModels.Keys.ToArray(),
             status[..Math.Min(status.Length,2000)], fresh && _remoteVideoAt.HasValue && DateTimeOffset.UtcNow-_remoteVideoAt.Value < TimeSpan.FromSeconds(4) ? PreviewJpeg(_video.Image) : null,
             PreviewJpeg(_recognizedVideo.Image),fresh ? _remoteVideoAt : null,
-            _conveyor?.IsRunning == true && _latestHardware is { Connected: true, SpeedBoosted: true } && DateTimeOffset.UtcNow-_latestHardwareAt < TimeSpan.FromSeconds(2), (int)(_boostSeconds.Value * 1000));
+            _conveyor?.IsRunning == true && _latestHardware is { Connected: true, SpeedBoosted: true } && DateTimeOffset.UtcNow-_latestHardwareAt < TimeSpan.FromSeconds(2), (int)(_boostSeconds.Value * 1000),
+            _conveyor != null && _latestHardware is { Connected: true, EmergencyStopped: true }, (_conveyor as ConveyorSerialController)?.EmergencySwitchReady);
     }
     private async Task PollRemoteAsync()
     {
@@ -247,6 +248,8 @@ public sealed partial class UserMainForm
                 if (_conveyor is not IHardwareConveyorController { SupportsHardware: true } hardware)
                     throw new IOException("V4 장비 연결이 필요합니다.");
                 // Firmware refuses this until the physical NC contact is restored. Never auto-RUN.
+                if ((_conveyor as ConveyorSerialController)?.EmergencySwitchReady == false)
+                    throw new InvalidOperationException("현장 긴급 정지 버튼이 아직 눌려 있습니다. 버튼을 원위치한 뒤 다시 해제하세요.");
                 await hardware.ResetEmergencyAsync(); await PollHardwareAsync(_conveyor); break;
             case RemoteAction.SelectModel:
                 if (_runningInspection || _inspectionBusy) throw new InvalidOperationException("먼저 검사를 중지하세요.");

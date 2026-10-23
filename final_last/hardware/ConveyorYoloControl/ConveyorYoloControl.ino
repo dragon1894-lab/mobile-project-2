@@ -14,12 +14,12 @@
 const int PUL_PIN = 5, DIR_PIN = 6, LED_PIN = 7;
 const int DHT_PIN = 30, GAS_PIN = A0, SERVO_PIN = 11, ESTOP_PIN = 12;
 const int LED_COUNT = 24;
-// 경보: 가스 A0 600 이상 또는 온도 27℃ 이상이면 빨간 LED 깜빡임 + 부저 200Hz 0.5초 울림/0.5초 쉼 반복
-// 해제: 가스 580 미만이면서 온도 26.5℃ 미만(경계값에서 켜졌다 꺼졌다 반복 방지)
+// 경보: 가스 A0 600 이상 또는 온도 30℃ 이상이면 빨간 LED 깜빡임 + 부저 200Hz 0.5초 울림/0.5초 쉼 반복
+// 해제: 가스 580 미만이면서 온도 29.5℃ 미만(경계값에서 켜졌다 꺼졌다 반복 방지)
 // 결과 표시: PC가 RESULT 1(불량)이면 빨강, RESULT 0(정상)이면 초록을 2초 동안 켬. 가스 경보 중에는 경보가 우선
 const int BUZZER_PIN = 8, RED_LED_PIN = 40, GREEN_LED_PIN = 42;
 const int GAS_ALARM_ON = 600, GAS_ALARM_OFF = 580;
-const float TEMP_ALARM_ON = 27.0, TEMP_ALARM_OFF = 26.5;
+const float TEMP_ALARM_ON = 30.0, TEMP_ALARM_OFF = 29.5;
 const unsigned int BUZZER_HZ = 200;
 const unsigned long ALARM_TOGGLE_MS = 500, GAS_CHECK_MS = 100, RESULT_LAMP_MS = 2000;
 const byte LED_BRIGHTNESS = 64;
@@ -229,6 +229,9 @@ void printStatus() {
   Serial.print(",\"speedBoosted\":"); Serial.print(speedBoosted ? "true" : "false");
   Serial.print(",\"sorterAngle\":"); Serial.print(sorterAngle);
   Serial.print(",\"sorting\":"); Serial.print((sorting || jobCount > 0) ? "true" : "false");
+  // 긴급 정지 버튼이 원위치돼 0.2초 이상 지났는지(= RESET_ESTOP을 받을 수 있는지). 앱이 [잠금 해제] 버튼 활성화에 사용
+  Serial.print(",\"emergencySwitchReady\":");
+  Serial.print(digitalRead(ESTOP_PIN) == LOW && switchClosedSince && millis() - switchClosedSince >= 200 ? "true" : "false");
   Serial.println("}");
 }
 

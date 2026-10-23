@@ -75,13 +75,26 @@ public sealed class RemoteWorkerForm : Form
         FlowLayoutPanel Row(params Control[] controls) { var row=new FlowLayoutPanel { Width=1180,Height=42,WrapContents=false,AutoScroll=true,Margin=Padding.Empty };row.Controls.AddRange(controls);rows.Controls.Add(row);return row; }
         Label Label(string text)=>new() { Text=text,AutoSize=true,Padding=new Padding(0,6,0,0) };
         Row(Label("카메라"),_camera,Command("연결",RemoteAction.ConnectCamera),Command("해제",RemoteAction.DisconnectCamera),Command("검사 시작",RemoteAction.StartInspection),Command("검사 중지",RemoteAction.StopInspection),Command("검사·벨트 정지",RemoteAction.StopAll));
-        Row(Label("COM"),_port,Command("포트 갱신",RemoteAction.RefreshPorts),Command("벨트 연결",RemoteAction.ConnectConveyor),Command("연결 해제",RemoteAction.DisconnectConveyor),Command("벨트 구동",RemoteAction.RunConveyor),Command("벨트 정지",RemoteAction.StopConveyor));
-        Row(Command("조명 켜기",RemoteAction.SetLight,true),Command("조명 끄기",RemoteAction.SetLight,false),Command("긴급 정지 잠금 해제",RemoteAction.ResetEmergency),Label("물리 버튼 해제 후 가능 · 자동 재출발 없음"));
+        Row(Label("COM"),_port,Command("포트 갱신",RemoteAction.RefreshPorts),Command("벨트 연결",RemoteAction.ConnectConveyor),Command("연결 해제",RemoteAction.DisconnectConveyor),_remoteRun=Command("벨트 구동",RemoteAction.RunConveyor),Command("벨트 정지",RemoteAction.StopConveyor));
+        Row(Command("조명 켜기",RemoteAction.SetLight,true),Command("조명 끄기",RemoteAction.SetLight,false),_remoteReset=Command("긴급 정지 잠금 해제",RemoteAction.ResetEmergency),_estopHint=Label(EstopIdleHint));
         Row(Label("인식 후 2배 가속 유지(초)"),_boostSeconds,Command("가속 시간 적용",RemoteAction.SetBoostDuration),Label("다음 제품 인식부터 적용 · V7 업로드 필요"));
         Row(_sorting,Label("기본속도 이동(ms)"),_travel,Label("55° 유지(ms)"),_hold,Command("분류 설정 적용",RemoteAction.SetSorting));
         Row(Label("모델"),_model,Command("모델 적용",RemoteAction.SelectModel),Label("검사 중지 후 적용"));
         _operations.Controls.Add(rows);
         layout.Controls.Add(videos,0,0);layout.Controls.Add(_videoAge,0,1);layout.Controls.Add(_operations,0,2);layout.Controls.Add(_workerStatus,0,3);return layout;
+    }
+    // 긴급 정지 잠금 중에는 원격 벨트 구동을 막고, 현장 버튼이 원위치된 뒤에만 원격 잠금 해제를 허용합니다.
+    private const string EstopIdleHint="물리 버튼 해제 후 가능 · 자동 재출발 없음";
+    private Button _remoteRun=null!, _remoteReset=null!;
+    private Label _estopHint=null!;
+    private void UpdateEmergencyControls(WorkerConnectionDto? worker)
+    {
+        var latched=worker is { IsOnline: true } && worker.State.EmergencyStopped;
+        var switchReady=worker?.State.EmergencySwitchReady;
+        _remoteRun.Enabled=!latched;
+        _remoteReset.Enabled=!latched || switchReady!=false;
+        _estopHint.Text=!latched?EstopIdleHint:switchReady==false?"긴급 정지 버튼 눌림 · 현장에서 버튼 원위치 필요":"긴급 정지 잠금 중 · 잠금 해제 후 벨트 구동";
+        _estopHint.ForeColor=!latched?Color.DimGray:switchReady==false?Color.Firebrick:Color.DarkOrange;
     }
     private Button Command(string text, RemoteAction action, bool? enabled=null)
     {
@@ -129,6 +142,7 @@ public sealed class RemoteWorkerForm : Form
             if(IsDisposed) return;
             _worker=snapshot.Worker;
             _operations.Enabled=_worker?.IsOnline==true && !_sending;
+            UpdateEmergencyControls(_worker);
             _connection.Text=_worker==null?"작업자 미연결 · 작업자 앱을 실행하고 같은 서버로 로그인하세요."
                 :$"{(_worker.IsOnline?"온라인":"오프라인 · 원격 제어 불가")} · {_worker.UserId} / {_worker.State.MachineName} · 마지막 수신 {_worker.ReceivedAt.ToLocalTime():HH:mm:ss}\r\n이더넷/LAN 서버 경유 · 물리 긴급 정지는 원격으로 우회할 수 없습니다.";
             _connection.ForeColor=_worker?.IsOnline==true?Color.FromArgb(0,110,90):Color.Firebrick;

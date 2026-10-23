@@ -96,6 +96,8 @@ public sealed partial class UserMainForm
     {
         if (_conveyor == null && !_conveyorCommandBusy) { _conveyorState.Text = "벨트 미연결 · COM 포트를 고르고 [벨트 연결]을 먼저 누르세요."; return; }
         if (_conveyor == null || _conveyorCommandBusy || _arduinoSetupBusy) return;
+        if (_latestHardware is { Connected: true, EmergencyStopped: true })
+        { _conveyorState.Text = "긴급 정지 잠금 중 · 버튼 원위치 → [잠금 해제] → 벨트 구동 순서로 다시 시작하세요."; return; }
         _conveyorCommandBusy = true;
         _conveyorRun.Enabled = false;
         try
@@ -103,6 +105,9 @@ public sealed partial class UserMainForm
             await _conveyor.RunAsync();
             if (!IsDisposed) _conveyorState.Text = "PUL/DIR 구동 응답 확인 · 연속 검출 · 인식돼도 벨트는 계속 이동합니다.";
         }
+        // 긴급 정지 잠금 때문에 거절된 것은 통신 고장이 아니므로 연결을 끊지 않습니다.
+        catch (IOException ex) when (ex.Message.Contains("EMERGENCY_STOP"))
+        { if (!IsDisposed) _conveyorState.Text = "긴급 정지 잠금 중 · 버튼 원위치 → [잠금 해제] → 벨트 구동 순서로 다시 시작하세요."; }
         catch (Exception ex) { if (!IsDisposed) FailConveyor("구동 응답 확인 실패: " + ex.Message); }
         finally { _conveyorCommandBusy = false; if (!IsDisposed) _conveyorRun.Enabled = _conveyor != null; }
     }

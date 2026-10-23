@@ -89,6 +89,8 @@ public sealed partial class UserMainForm
         if (_conveyorCommandBusy || _arduinoSetupBusy) return;
         if (_conveyor is not IHardwareConveyorController { SupportsHardware: true } hardware)
         { _conveyorState.Text = "먼저 센서·긴급정지 V4 펌웨어로 아두이노를 연결하세요."; return; }
+        if ((_conveyor as ConveyorSerialController)?.EmergencySwitchReady == false)
+        { _conveyorState.Text = "긴급 정지 버튼이 아직 눌려 있습니다 · 버튼을 원위치한 뒤 [잠금 해제]를 누르세요."; return; }
         _conveyorCommandBusy = true;
         try
         {

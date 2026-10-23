@@ -41,6 +41,8 @@ internal sealed class ConveyorSerialController(IConveyorTransport transport) : I
     public bool IsRunning { get; private set; }
     private bool _supportsLongSorting;
     public bool? IsLightOn { get; private set; }
+    /// <summary>긴급 정지 버튼이 원위치돼 잠금 해제를 받을 수 있는지. 이 값을 보내지 않는 옛 펌웨어면 null.</summary>
+    public bool? EmergencySwitchReady { get; private set; }
     public bool SupportsHardware { get; private set; }
     public bool SupportsRecognitionBoost { get; private set; }
     public bool SupportsConfigurableBoost { get; private set; }
@@ -103,6 +105,8 @@ internal sealed class ConveyorSerialController(IConveyorTransport transport) : I
         {
             if (!reply.StartsWith("HW ", StringComparison.Ordinal)) return false;
             status = HardwareSerialProtocol.Parse(reply);
+            EmergencySwitchReady = reply.Contains("\"emergencySwitchReady\":true") ? true
+                : reply.Contains("\"emergencySwitchReady\":false") ? false : null;
             return true;
         });
         IsRunning = status!.BeltRunning;

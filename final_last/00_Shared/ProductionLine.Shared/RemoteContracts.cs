@@ -13,7 +13,8 @@ public sealed record WorkerStateDto(
     bool ConveyorConnected, string? Port, bool BeltRunning, bool? LightOn,
     bool AutoSorting, int TravelMs, int HoldMs, string Model, int Page,
     string[] Ports, string[] Models, string Status,
-    byte[]? LiveJpeg, byte[]? LastProductJpeg, DateTimeOffset? LiveCapturedAt, bool SpeedBoosted = false, int BoostDurationMs = 3000);
+    byte[]? LiveJpeg, byte[]? LastProductJpeg, DateTimeOffset? LiveCapturedAt, bool SpeedBoosted = false, int BoostDurationMs = 3000,
+    bool EmergencyStopped = false, bool? EmergencySwitchReady = null);
 
 public sealed record WorkerHeartbeatRequest(Guid ClientId, WorkerStateDto State, bool ReadyForCommand);
 public sealed record WorkerHeartbeatResponse(RemoteCommandDto? Command);
