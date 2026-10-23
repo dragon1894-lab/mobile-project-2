@@ -5,14 +5,14 @@ namespace ProductionLine.UserApp;
 public sealed partial class UserMainForm
 {
     internal const int FixedSortTravelMs = 15000;
-    internal const int FixedSortHoldMs = 15000;
+    internal const int FixedSortHoldMs = 7000;
     private const int HardwareLineId = 1;
     private UpdateLineHardwareRequest? _latestHardware;
     private DateTimeOffset _latestHardwareAt;
     private bool _hardwarePublishBusy;
     private DateTimeOffset _lastHardwarePublish;
     private readonly NumericUpDown _boostSeconds = new() { Minimum = 0.5m, Maximum = 60, DecimalPlaces = 1, Increment = 0.5m, Value = 18, Width = 80 };
-    private readonly CheckBox _automaticSort = new() { Text = "불량 자동 분류", AutoSize = true };
+    private readonly CheckBox _automaticSort = new() { Text = "불량 자동 분류", AutoSize = true, Checked = true };
     private readonly NumericUpDown _sortTravelMs = new() { Minimum = 500, Maximum = 60000, Value = FixedSortTravelMs, Width = 76 };
     private readonly NumericUpDown _sortHoldMs = new() { Minimum = 200, Maximum = 60000, Value = FixedSortHoldMs, Width = 76 };
     private readonly Label _sortTimingSummary = new() { AutoSize = true, Padding = new Padding(8, 7, 12, 0), ForeColor = UiMuted };

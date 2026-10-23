@@ -17,10 +17,10 @@ public sealed class RemoteWorkerForm : Form
     private readonly Label _hardware = new() { Dock = DockStyle.Fill, AutoEllipsis = true };
     private readonly NumericUpDown _camera = new() { Minimum = 0, Maximum = 9, Width = 60 };
     private readonly ComboBox _port = Choice(110), _model = Choice(380);
-    private readonly CheckBox _sorting = new() { Text = "불량 자동 분류", AutoSize = true };
+    private readonly CheckBox _sorting = new() { Text = "불량 자동 분류", AutoSize = true, Checked = true };
     private readonly NumericUpDown _boostSeconds = new() { Minimum = 0.5m, Maximum = 60, DecimalPlaces = 1, Increment = 0.5m, Value = 18, Width = 80 };
     private readonly NumericUpDown _travel = new() { Minimum = 500, Maximum = 60000, Increment = 100, Value = 15000, Width = 85 };
-    private readonly NumericUpDown _hold = new() { Minimum = 200, Maximum = 60000, Increment = 100, Value = 15000, Width = 85 };
+    private readonly NumericUpDown _hold = new() { Minimum = 200, Maximum = 60000, Increment = 100, Value = 7000, Width = 85 };
     private readonly Panel _operations = new() { Dock = DockStyle.Fill, AutoScroll = true, Enabled = false };
     private readonly DataGridView _commands = Grid(), _history = Grid();
     private WorkerConnectionDto? _worker;
